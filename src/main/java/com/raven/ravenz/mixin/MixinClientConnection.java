@@ -4,9 +4,9 @@ import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.event.impl.network.DisconnectEvent;
 import com.raven.ravenz.event.impl.network.PacketEvent;
 import com.raven.ravenz.event.types.TransferOrder;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.Packet;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -33,7 +33,7 @@ public class MixinClientConnection {
     }
 
     @Inject(method = "sendInternal", at = @At("HEAD"), cancellable = true)
-    private void sendPacketEventInject(Packet<?> packet, ChannelFutureListener callbacks, boolean flush, CallbackInfo ci) {
+    private void sendPacketEventInject(Packet<?> packet, PacketCallbacks callbacks, boolean flush, CallbackInfo ci) {
         postPacketEvent(packet, TransferOrder.SEND, ci);
     }
 
