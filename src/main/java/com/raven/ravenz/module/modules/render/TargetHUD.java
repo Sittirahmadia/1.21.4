@@ -217,7 +217,7 @@ public final class TargetHUD extends Module {
     }
 
     private void updateHealthAnimation(float targetHealthPercent) {
-        float deltaTime = mc.getRenderTickCounter().getTickDelta() / 20f;
+        float deltaTime = mc.getRenderTickCounter().getTickDelta(true) / 20f;
 
         if (Math.abs(targetHealthPercent - lastHealthPercent) > 0.001f) {
             lastHealthPercent = targetHealthPercent;
@@ -312,7 +312,7 @@ public final class TargetHUD extends Module {
 
     private void renderParticles(int screenWidth, int screenHeight) {
         long now = System.currentTimeMillis();
-        float deltaTime = mc.getRenderTickCounter().getTickDelta() / 20f;
+        float deltaTime = mc.getRenderTickCounter().getTickDelta(true) / 20f;
 
         Iterator<Particle> it = particleQueue.iterator();
         while (it.hasNext()) {

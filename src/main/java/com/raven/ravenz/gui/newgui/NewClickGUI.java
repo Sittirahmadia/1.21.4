@@ -155,10 +155,10 @@ public class NewClickGUI extends Screen {
         }
 
         NanoVGRenderer.save();
-        NanoVGRenderer.translate(centerX, centerY, 0);
+        NanoVGRenderer.translate(centerX, centerY);
         
-        NanoVGRenderer.scale(scale * guiScale, scale * guiScale, 1f);
-        NanoVGRenderer.translate(-centerX, -centerY, 0);
+        NanoVGRenderer.scale(scale * guiScale, scale * guiScale);
+        NanoVGRenderer.translate(-centerX, -centerY);
 
         renderSearchBar(alpha);
         renderFriendsButton(alpha);

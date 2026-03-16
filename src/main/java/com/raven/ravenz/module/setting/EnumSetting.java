@@ -55,7 +55,7 @@ public class EnumSetting<T extends Enum<T>> extends Setting {
      */
     public void setValueByName(String name) {
         for (T v : values) {
-            if (v.getName().equalsIgnoreCase(name)) {
+            if (v.name().equalsIgnoreCase(name)) {
                 value = v;
                 return;
             }
@@ -64,6 +64,6 @@ public class EnumSetting<T extends Enum<T>> extends Setting {
 
     @Override
     public String toString() {
-        return getName() + ": " + value.getName();
+        return getName() + ": " + value.name();
     }
 }

@@ -48,7 +48,7 @@ public class ESP3D extends Module {
         if (isNull() || mc.world == null) return;
 
         MatrixStack stack = event.getMatrixStack();
-        float tickDelta = mc.getRenderTickCounter().getTickDelta();
+        float tickDelta = mc.getRenderTickCounter().getTickDelta(true);
 
         if (throughWalls.getValue()) {
             Render3DEngine.setupThroughWalls();

@@ -117,7 +117,7 @@ public final class ChatUtil implements IMinecraft {
 
         Type(final Color color) {
             this.color = color.getRGB();
-            this.name = StringUtils.normalizeEnumName(this.getName());
+            this.name = StringUtils.normalizeEnumName(this.name());
         }
 
         public int color() {

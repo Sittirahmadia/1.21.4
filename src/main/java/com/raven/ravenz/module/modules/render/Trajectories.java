@@ -149,7 +149,7 @@ public final class Trajectories extends Module {
             }
         }
 
-        float tickDelta = mc.getRenderTickCounter().getTickDelta();
+        float tickDelta = mc.getRenderTickCounter().getTickDelta(true);
         for (Map.Entry<Entity, ProjectileTracker> entry : trackedProjectiles.entrySet()) {
             Entity entity = entry.getKey();
             ProjectileTracker tracker = entry.getValue();

@@ -68,7 +68,7 @@ public class Nametags extends Module {
             if (frustum != null && !frustum.isVisible(box))
                 continue;
 
-            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta());
+            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta(true));
             double x = interpolated.x;
             double y = interpolated.y;
             double z = interpolated.z;
@@ -192,7 +192,7 @@ public class Nametags extends Module {
             if (frustum != null && !frustum.isVisible(box))
                 continue;
 
-            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta());
+            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta(true));
             double x = interpolated.x;
             double y = interpolated.y;
             double z = interpolated.z;

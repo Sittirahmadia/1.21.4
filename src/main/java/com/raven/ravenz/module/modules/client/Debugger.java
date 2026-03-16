@@ -35,7 +35,7 @@ public class Debugger extends Module {
                 packet.getButton(),
                 packet.getActionType(),
                 packet.getModifiedStacks(),
-                packet.getCursor()
+                packet.getClickedItem()
         ));
     }
 }

@@ -160,9 +160,9 @@ public class RichModernGUI extends Screen {
         }
 
         NanoVGRenderer.save();
-        NanoVGRenderer.translate(cx, cy, 0);
-        NanoVGRenderer.scale(sc, sc, 1f);
-        NanoVGRenderer.translate(-cx, -cy, 0);
+        NanoVGRenderer.translate(cx, cy);
+        NanoVGRenderer.scale(sc, sc);
+        NanoVGRenderer.translate(-cx, -cy);
 
         // Outer container
         NanoVGRenderer.drawRoundedRect(gx, gy, GUI_W, GUI_H, RADIUS, a(C_BG, al));
