@@ -18,7 +18,7 @@ import static com.raven.ravenz.RavenZClient.mc;
 @Mixin(HandledScreen.class)
 public class HandledScreenMixin {
     @Inject(method = "drawSlot", at = @At("TAIL"))
-    public void postDrawSlot(DrawContext context, Slot slot, int x, int y, CallbackInfo ci) {
+    public void postDrawSlot(DrawContext context, Slot slot, CallbackInfo ci) {
         if (RavenZClient.INSTANCE == null) return;
         if (RavenZClient.INSTANCE.moduleManager.getModule(ContainerSlots.class).isEmpty()) return;
         if (!RavenZClient.INSTANCE.moduleManager.getModule(ContainerSlots.class).get().isEnabled()) return;
