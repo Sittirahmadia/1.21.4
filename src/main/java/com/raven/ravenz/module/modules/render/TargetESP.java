@@ -12,6 +12,7 @@ import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.RenderLayers;
+import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.util.BufferAllocator;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
@@ -53,7 +54,7 @@ public final class TargetESP extends Module {
         }
 
         MatrixStack stack = event.getMatrixStack();
-        float tickDelta = mc.getRenderTickCounter().getDeltaTicks();
+        float tickDelta = mc.getRenderTickCounter().getTickDelta();
 
         GlStateManager._enableBlend();
         GlStateManager._blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE, GL11.GL_ONE);
@@ -86,7 +87,7 @@ public final class TargetESP extends Module {
             }
 
             VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(TARGET_ESP_BUFFER_ALLOCATOR);
-            VertexConsumer consumer = immediate.getBuffer(RenderLayers.entityTranslucent(FIREFLY_TEXTURE));
+            VertexConsumer consumer = immediate.getBuffer(RenderLayer.getEntityTranslucent(FIREFLY_TEXTURE, true));
 
             for (int layer = 0; layer < numLayers; layer++) {
                 float layerOffset = layer * 120.0f;

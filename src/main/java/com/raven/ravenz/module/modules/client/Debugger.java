@@ -29,13 +29,13 @@ public class Debugger extends Module {
                   modifiedItems: %s
                   cursor: %s
                 """.formatted(
-                packet.syncId(),
-                packet.revision(),
-                packet.slot(),
-                packet.button(),
-                packet.actionType(),
-                packet.modifiedStacks(),
-                packet.cursor()
+                packet.getSyncId(),
+                packet.getRevision(),
+                packet.getSlot(),
+                packet.getButton(),
+                packet.getActionType(),
+                packet.getModifiedStacks(),
+                packet.getCursor()
         ));
     }
 }

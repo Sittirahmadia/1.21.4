@@ -19,6 +19,8 @@ import net.minecraft.util.hit.EntityHitResult;
 
 public class ShieldBreaker extends Module {
 
+    public static boolean breakingShield = false;
+
     // Delay settings
     private final RangeSetting reactionDelay   = new RangeSetting("Reaction Time",   0, 250, 10, 25, 1);
     private final RangeSetting swapDelay       = new RangeSetting("Swap Delay",      0, 500, 10, 25, 1);
@@ -89,7 +91,8 @@ public class ShieldBreaker extends Module {
                 if (!reactionTimer.hasElapsedTime(getRandomLong(reactionDelay), false)) return;
 
                 int axeSlot = findAxeInHotbar();
-                if (axeSlot != -1 && oldSlot == -1
+                breakingShield = true;
+            if (axeSlot != -1 && oldSlot == -1
                         && initialSwapTimer.hasElapsedTime(getRandomLong(swapDelay), false)) {
                     oldSlot = mc.player.getInventory().selectedSlot;
                     mc.player.getInventory().selectedSlot = axeSlot;
@@ -97,6 +100,7 @@ public class ShieldBreaker extends Module {
                 }
             }
         } else {
+            breakingShield = false;
             reactionTimer.reset();
             // Swap back
             if (oldSlot != -1 && swapBackTimer.hasElapsedTime(getRandomLong(swapBackDelay), false)) {

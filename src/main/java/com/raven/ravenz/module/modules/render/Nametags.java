@@ -68,7 +68,7 @@ public class Nametags extends Module {
             if (frustum != null && !frustum.isVisible(box))
                 continue;
 
-            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getDeltaTicks());
+            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta());
             double x = interpolated.x;
             double y = interpolated.y;
             double z = interpolated.z;
@@ -192,7 +192,7 @@ public class Nametags extends Module {
             if (frustum != null && !frustum.isVisible(box))
                 continue;
 
-            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getDeltaTicks());
+            Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta());
             double x = interpolated.x;
             double y = interpolated.y;
             double z = interpolated.z;
@@ -284,9 +284,9 @@ public class Nametags extends Module {
                     float totalItemWidth = items.size() * itemSize + (items.size() - 1) * itemSpacing;
                     float itemX = posX + (endPosX - posX - totalItemWidth) / 2f;
 
-                    event.getContext().getMatrices().pushMatrix();
-                    event.getContext().getMatrices().translate(itemX, itemY);
-                    event.getContext().getMatrices().scale(scale, scale);
+                    event.getContext().getMatrices().push();
+                    event.getContext().getMatrices().translate(itemX, itemY, 0);
+                    event.getContext().getMatrices().scale(scale, scale, 1f);
 
                     for (int i = 0; i < items.size(); i++) {
                         net.minecraft.item.ItemStack stack = items.get(i);
@@ -294,7 +294,7 @@ public class Nametags extends Module {
                         event.getContext().drawItem(stack, (int) xOffset, 0);
                     }
 
-                    event.getContext().getMatrices().popMatrix();
+                    event.getContext().getMatrices().pop();
                 }
             }
         }

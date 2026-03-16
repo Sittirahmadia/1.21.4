@@ -53,11 +53,11 @@ public final class ThemeManager {
         register(blue);
         register(solar);
 
-        DEFAULT_NAME = defaultTheme.name();
+        DEFAULT_NAME = defaultTheme.getName();
     }
 
     public static void register(Theme theme) {
-        THEMES.put(theme.name(), theme);
+        THEMES.put(theme.getName(), theme);
     }
 
     public static Theme getTheme(String name) {

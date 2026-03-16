@@ -90,9 +90,9 @@ public class FriendsScreen extends Screen {
         NanoVGRenderer.beginFrame(context);
 
         NanoVGRenderer.save();
-        NanoVGRenderer.translate(width / 2f, height / 2f);
-        NanoVGRenderer.scale(scale, scale);
-        NanoVGRenderer.translate(-width / 2f, -height / 2f);
+        NanoVGRenderer.translate(width / 2f, height / 2f, 0);
+        NanoVGRenderer.scale(scale, scale, 1f);
+        NanoVGRenderer.translate(-width / 2f, -height / 2f, 0);
 
         int bgAlpha = (int) (250 * alpha);
         Color panelBg = new Color(PANEL_BG.getRed(), PANEL_BG.getGreen(), PANEL_BG.getBlue(), bgAlpha);

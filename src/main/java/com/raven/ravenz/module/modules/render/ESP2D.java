@@ -69,7 +69,7 @@ public class ESP2D extends Module {
                         if (frustum != null && !frustum.isVisible(box))
                                 continue;
 
-                        Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getDeltaTicks());
+                        Vec3d interpolated = entity.getLerpedPos(mc.getRenderTickCounter().getTickDelta());
                         double x = interpolated.x;
                         double y = interpolated.y;
                         double z = interpolated.z;

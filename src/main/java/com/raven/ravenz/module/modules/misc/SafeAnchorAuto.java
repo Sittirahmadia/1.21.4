@@ -75,7 +75,7 @@ public final class SafeAnchorAuto extends Module {
             BlockPos pos = hit.getBlockPos();
             if (mc.player.squaredDistanceTo(Vec3d.ofCenter(pos)) > range.getValue() * range.getValue()) return;
 
-            originalSlot = mc.player.getInventory().getSelectedSlot();
+            originalSlot = mc.player.getInventory().selectedSlot;
 
             var state = mc.world.getBlockState(pos);
             if (state.getBlock() instanceof RespawnAnchorBlock) {

@@ -21,7 +21,7 @@ public class RavenZPlusClient implements ClientModInitializer {
                         "key.ravenezplus.open_ui",
                         InputUtil.Type.KEYSYM,
                         GLFW.GLFW_KEY_RIGHT_SHIFT,
-                        KeyBinding.Category.MISC
+                        "key.categories.misc"
                 )
         );
 
@@ -30,7 +30,7 @@ public class RavenZPlusClient implements ClientModInitializer {
                         "key.ravenezplus.safe_anchor",
                         InputUtil.Type.KEYSYM,
                         GLFW.GLFW_KEY_H,
-                        KeyBinding.Category.MISC
+                        "key.categories.misc"
                 )
         );
 

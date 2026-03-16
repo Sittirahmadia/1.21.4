@@ -35,7 +35,7 @@ public class GameRendererMixin {
     private void renderHand(RenderTickCounter tickCounter, CallbackInfo ci) {
         MinecraftClient mc = MinecraftClient.getInstance();
         Camera camera = mc.gameRenderer.getCamera();
-        float tickDelta = tickCounter.getDeltaTicks();
+        float tickDelta = tickCounter.getTickDelta();
         MatrixStack matrixStack = new MatrixStack();
         matrixStack.multiply(RotationAxis.POSITIVE_X.rotationDegrees(camera.getPitch()));
         matrixStack.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(camera.getYaw() + 180.0f));

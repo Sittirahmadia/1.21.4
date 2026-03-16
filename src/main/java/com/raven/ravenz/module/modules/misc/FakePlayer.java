@@ -116,7 +116,7 @@ public class FakePlayer extends Module {
             double offsetX = (Math.random() - 0.5) * 0.5;
             double offsetY = Math.random() * 1.8;
             double offsetZ = (Math.random() - 0.5) * 0.5;
-            mc.world.addParticleClient(
+            mc.world.addParticle(
                     ParticleTypes.DAMAGE_INDICATOR,
                     fakePlayer.getX() + offsetX,
                     fakePlayer.getY() + offsetY,
@@ -131,7 +131,7 @@ public class FakePlayer extends Module {
                 double offsetX = (Math.random() - 0.5) * 0.8;
                 double offsetY = Math.random() * 1.8;
                 double offsetZ = (Math.random() - 0.5) * 0.8;
-                mc.world.addParticleClient(
+                mc.world.addParticle(
                         ParticleTypes.CRIT,
                         fakePlayer.getX() + offsetX,
                         fakePlayer.getY() + offsetY,
@@ -182,7 +182,7 @@ public class FakePlayer extends Module {
             double offsetX = (mc.world.random.nextDouble() - 0.5) * 2.0;
             double offsetY = mc.world.random.nextDouble() * 2.0;
             double offsetZ = (mc.world.random.nextDouble() - 0.5) * 2.0;
-            mc.world.addParticleClient(
+            mc.world.addParticle(
                     ParticleTypes.TOTEM_OF_UNDYING,
                     fakePlayer.getX() + offsetX,
                     fakePlayer.getY() + offsetY,
@@ -213,8 +213,8 @@ public class FakePlayer extends Module {
         if (fakePlayer != null)
             return;
         GameProfile original = mc.player.getGameProfile();
-        GameProfile profile = new GameProfile(UUID.randomUUID(), original.name());
-        profile.properties().putAll(original.properties());
+        GameProfile profile = new GameProfile(UUID.randomUUID(), original.getName());
+        profile.getProperties().putAll(original.getProperties());
 
         OtherClientPlayerEntity other = new OtherClientPlayerEntity(mc.world, profile);
         other.copyPositionAndRotation(mc.player);
