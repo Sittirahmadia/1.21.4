@@ -2,7 +2,7 @@ package com.raven.ravenz.utils.render;
 
 import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.utils.render.font.fonts.FontRenderer;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.render.VertexFormat;
 import lombok.experimental.UtilityClass;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.render.*;

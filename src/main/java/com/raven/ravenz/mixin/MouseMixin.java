@@ -4,7 +4,6 @@ import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.event.impl.input.MouseClickEvent;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
-import net.minecraft.client.input.MouseInput;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -20,12 +19,12 @@ public class MouseMixin {
     private MinecraftClient client;
 
     @Inject(method = "onMouseButton", at = @At("HEAD"))
-    private void onMouseButton(long window, MouseInput input, int action, CallbackInfo ci) {
+    private void onMouseButton(long window, int button, int action, int mods, CallbackInfo ci) {
         if (RavenZClient.INSTANCE == null) return;
         if (window != client.getWindow().getHandle()) return;
         if (client.currentScreen != null) return;
 
-        MouseClickEvent event = new MouseClickEvent(input.button(), action, input.modifiers());
+        MouseClickEvent event = new MouseClickEvent(button, action, mods);
         RavenZClient.INSTANCE.getEventBus().post(event);
     }
 }

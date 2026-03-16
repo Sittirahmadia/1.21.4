@@ -3,7 +3,7 @@ package com.raven.ravenz.module;
 import com.raven.ravenz.module.modules.client.*;
 import com.raven.ravenz.module.modules.combat.AutoCrystal;
 import com.raven.ravenz.module.modules.combat.ShieldBreaker;
-import com.raven.ravenz.module.modules.player.TriggerBot;
+import com.raven.ravenz.module.modules.combat.TriggerBot;
 import lombok.Getter;
 
 import java.util.Arrays;

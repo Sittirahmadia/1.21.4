@@ -7,11 +7,8 @@ import com.raven.ravenz.module.Module;
 import com.raven.ravenz.module.modules.client.ClickGUIModule;
 import com.raven.ravenz.module.setting.*;
 import com.raven.ravenz.utils.keybinding.KeyUtils;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -264,9 +261,9 @@ public final class ClickGui extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mx = click.x(), my = click.y();
-        int btn = click.button();
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        double mx = mouseX, my = mouseY;
+        int btn = button;
         if (btn < 0 || btn > 8) return false;
 
         if (openDropdown != null) {
@@ -319,7 +316,7 @@ public final class ClickGui extends Screen {
             }
         }
 
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private boolean handleDropdownClick(double mx, double my) {
@@ -390,9 +387,9 @@ public final class ClickGui extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        if (draggingSlider != null && click.button() == 0) {
-            double pct = Math.max(0, Math.min(1, (click.x() - sliderTrackX) / (double) sliderTrackW));
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (draggingSlider != null && button == 0) {
+            double pct = Math.max(0, Math.min(1, (mouseX - sliderTrackX) / (double) sliderTrackW));
             draggingSlider.setValue(draggingSlider.getMin() + pct * (draggingSlider.getMax() - draggingSlider.getMin()));
             return true;
         }
@@ -400,8 +397,8 @@ public final class ClickGui extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
-        if (click.button() == 0) draggingSlider = null;
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (button == 0) draggingSlider = null;
         return false;
     }
 
@@ -412,8 +409,8 @@ public final class ClickGui extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int key = input.key();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int key = keyCode;
 
         if (listeningKeybind != null) {
             if (key == GLFW.GLFW_KEY_ESCAPE) {
@@ -441,12 +438,12 @@ public final class ClickGui extends Screen {
             return true;
         }
 
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
-        char c = (char) input.codepoint();
+    public boolean charTyped(char chr, int modifiers) {
+        char c = chr;
         if (c >= 32 && c < 127 && searchQuery.length() < 30) {
             searchQuery += c;
             return true;

@@ -1,14 +1,14 @@
 package com.raven.ravenz.utils.render;
 
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderManager;
+import net.minecraft.client.render.entity.EntityRenderDispatcher;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 
 public final class CompatRenderDispatcher {
     private CompatRenderDispatcher() {}
 
-    public static void render(EntityRenderManager dispatcher, Entity entity, double x, double y, double z,
+    public static void render(EntityRenderDispatcher dispatcher, Entity entity, double x, double y, double z,
                               float yaw, float tickDelta, MatrixStack matrices,
                               VertexConsumerProvider provider, int light) {
         try {

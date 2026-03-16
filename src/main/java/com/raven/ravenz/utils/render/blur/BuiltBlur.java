@@ -1,7 +1,7 @@
 package com.raven.ravenz.utils.render.blur;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.vertex.VertexFormat;
+import com.mojang.blaze3d.platform.GlStateManager;
+import net.minecraft.client.render.VertexFormat;
 import com.raven.ravenz.utils.render.CompatShaders;
 import com.raven.ravenz.utils.render.font.util.BufferUtils;
 import net.minecraft.client.render.BufferBuilder;

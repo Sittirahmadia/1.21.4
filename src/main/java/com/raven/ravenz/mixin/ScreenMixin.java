@@ -2,7 +2,7 @@ package com.raven.ravenz.mixin;
 
 import com.raven.ravenz.gui.ClickGui;
 import com.raven.ravenz.gui.newgui.NewClickGUI;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;

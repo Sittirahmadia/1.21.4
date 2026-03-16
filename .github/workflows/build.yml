@@ -21,18 +21,13 @@ jobs:
           java-version: '21'
           distribution: 'microsoft'
 
-      - name: Setup Gradle 8.11
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.11'
-
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build
+      - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Upload artifact
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: Privatetete-1.21.4

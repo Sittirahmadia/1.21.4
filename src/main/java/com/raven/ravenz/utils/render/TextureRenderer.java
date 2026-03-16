@@ -1,8 +1,7 @@
 package com.raven.ravenz.utils.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
-import com.mojang.blaze3d.vertex.VertexFormat;
-import net.minecraft.client.gl.RenderPipelines;
+import com.mojang.blaze3d.platform.GlStateManager;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.Tessellator;
@@ -92,10 +91,10 @@ public final class TextureRenderer {
     public static void drawCenteredQuad(DrawContext context, Identifier texture, float x, float y, float width,
                                         float height, float rotationDeg, int color, boolean linearFilter) {
         var matrices = context.getMatrices();
-        matrices.pushMatrix();
-        matrices.translate(x, y);
+        matrices.push();
+        matrices.translate(x, y, 0);
         if (rotationDeg != 0.0f) {
-            matrices.rotate((float) Math.toRadians(rotationDeg));
+            matrices.multiply(new org.joml.Quaternionf().rotateZ((float) Math.toRadians(rotationDeg)));
         }
         int w = Math.max(1, Math.round(width));
         int h = Math.max(1, Math.round(height));
@@ -106,12 +105,12 @@ public final class TextureRenderer {
             enableLinearFiltering();
         }
 
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, texture, left, top, 0f, 0f, w, h, w, h);
+        context.drawTexture(texture, left, top, 0f, 0f, w, h, w, h);
 
         if (linearFilter) {
             disableLinearFiltering();
         }
-        matrices.popMatrix();
+        matrices.pop();
     }
 
     public static void drawMaskedQuad(DrawContext context, Identifier texture, float x, float y, float width,

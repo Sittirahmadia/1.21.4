@@ -13,12 +13,8 @@ import com.raven.ravenz.module.setting.Setting;
 import com.raven.ravenz.module.setting.StringSetting;
 import com.raven.ravenz.utils.AutoSaveManager;
 import com.raven.ravenz.utils.keybinding.KeyUtils;
-import net.minecraft.client.gl.RenderPipelines;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -309,7 +305,7 @@ public class RavenScreen extends Screen {
         int y = cardY + 14;
 
         if (loadedLogoId != null) {
-            context.drawTexture(RenderPipelines.GUI_TEXTURED, loadedLogoId, x, y, 0f, 0f, size, size, size, size);
+            context.drawTexture(loadedLogoId, x, y, 0f, 0f, size, size, size, size);
             return;
         }
 
@@ -609,13 +605,11 @@ public class RavenScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
         updateLayout();
         rebuildHitboxes();
 
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+        // mouseX, mouseY, button already in params
 
         if (listeningKeybind != null) {
             listeningKeybind.setKeyCode(button);
@@ -764,15 +758,15 @@ public class RavenScreen extends Screen {
             }
         }
 
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
         updateLayout();
         rebuildHitboxes();
 
-        double mouseX = click.x();
+        double mouseX = mouseX;
 
         if (draggingNumberSetting != null) {
             applyNumberFromMouse(draggingNumberSetting, mouseX);
@@ -793,7 +787,7 @@ public class RavenScreen extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         boolean consumed = draggingNumberSetting != null || draggingRangeSetting != null || draggingColorSetting != null;
 
         draggingNumberSetting = null;
@@ -823,8 +817,8 @@ public class RavenScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.key();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int key = keyCode;
 
         if (listeningKeybind != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -853,13 +847,13 @@ public class RavenScreen extends Screen {
             }
         }
 
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
+    public boolean charTyped(char chr, int modifiers) {
         if (editingStringSetting != null) {
-            char chr = (char) input.codepoint();
+            // chr already in params
             if (chr >= 32 && chr < 127) {
                 String current = editingStringSetting.getValue() == null ? "" : editingStringSetting.getValue();
                 if (current.length() < 48) {
@@ -870,7 +864,7 @@ public class RavenScreen extends Screen {
             }
         }
 
-        return super.charTyped(input);
+        return super.charTyped(chr, modifiers);
     }
 
     private void cycleModeBackward(ModeSetting setting) {

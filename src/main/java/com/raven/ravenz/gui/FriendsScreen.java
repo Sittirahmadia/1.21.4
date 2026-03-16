@@ -4,10 +4,7 @@ import com.raven.ravenz.utils.friend.FriendManager;
 import com.raven.ravenz.utils.render.nanovg.NanoVGRenderer;
 import com.raven.ravenz.utils.render.GuiGlowHelper;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.text.Text;
 
@@ -263,10 +260,8 @@ public class FriendsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // mouseX, mouseY, button already in params
         int panelX = (width - PANEL_WIDTH) / 2;
         int panelY = (height - PANEL_HEIGHT) / 2;
 
@@ -294,23 +289,23 @@ public class FriendsScreen extends Screen {
             return true;
         }
 
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
-        char chr = (char) input.codepoint();
+    public boolean charTyped(char chr, int modifiers) {
+        // chr already in params
         if (searchFocused) {
             searchQuery += chr;
             updatePlayerList();
             return true;
         }
-        return super.charTyped(input);
+        return super.charTyped(chr, modifiers);
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.key();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int key = keyCode;
         if (searchFocused) {
             if (keyCode == 259) {
                 if (!searchQuery.isEmpty()) {
@@ -323,7 +318,7 @@ public class FriendsScreen extends Screen {
                 return true;
             }
         }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override

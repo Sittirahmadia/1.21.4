@@ -8,11 +8,8 @@ import com.raven.ravenz.gui.FriendsScreen;
 import com.raven.ravenz.gui.effects.SnowEffect;
 import com.raven.ravenz.utils.render.nanovg.NanoVGRenderer;
 import com.raven.ravenz.utils.render.GuiGlowHelper;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.text.Text;
 
@@ -344,10 +341,8 @@ public class NewClickGUI extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;
@@ -394,13 +389,13 @@ public class NewClickGUI extends Screen {
         }
 
         searchFocused = false;
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
-        char chr = (char) input.codepoint();
-        int modifiers = input.modifiers();
+    public boolean charTyped(char chr, int modifiers) {
+        // chr already in params
+        // modifiers already in params
         if (configPanel != null && configPanel.charTyped(chr, modifiers)) {
             return true;
         }
@@ -434,14 +429,14 @@ public class NewClickGUI extends Screen {
             }
         }
 
-        return super.charTyped(input);
+        return super.charTyped(chr, modifiers);
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.key();
-        int scanCode = input.scancode();
-        int modifiers = input.modifiers();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int key = keyCode;
+        // scanCode already in params
+        // modifiers already in params
         if (configPanel != null && configPanel.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
@@ -463,14 +458,12 @@ public class NewClickGUI extends Screen {
                 return true;
             }
         }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;
@@ -485,14 +478,12 @@ public class NewClickGUI extends Screen {
         for (CategoryPanel panel : panels) {
             panel.mouseReleased(transformedMouseX, transformedMouseY, button);
         }
-        return super.mouseReleased(click);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
-    public boolean mouseDragged(Click click, double deltaX, double deltaY) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;

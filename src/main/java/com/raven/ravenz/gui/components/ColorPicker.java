@@ -1,6 +1,6 @@
 package com.raven.ravenz.gui.components;
 
-import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.render.VertexFormat;
 import com.raven.ravenz.module.setting.ColorSetting;
 import com.raven.ravenz.gui.theme.Theme;
 import com.raven.ravenz.gui.theme.ThemeManager;
@@ -180,13 +180,13 @@ public class ColorPicker {
 
 
     private void setupRendering(DrawContext context) {
-        context.getMatrices().pushMatrix();
+        context.getMatrices().push();
         CompatShaders.usePositionColor();
     }
 
     private void finishRendering(BufferBuilder buffer, DrawContext context, int x, int y, int width, int height) {
         BufferUtils.draw(buffer);
-        context.getMatrices().popMatrix();
+        context.getMatrices().pop();
         Theme theme = ThemeManager.getTheme(ClickGUIModule.INSTANCE.theme.getMode());
         UIRenderer.renderBorder(context, x, y, width, height, applyAlpha(theme.muted(), 200).getRGB());
     }

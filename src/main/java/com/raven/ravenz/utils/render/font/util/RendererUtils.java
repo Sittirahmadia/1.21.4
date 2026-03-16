@@ -1,6 +1,6 @@
 package com.raven.ravenz.utils.render.font.util;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.platform.GlStateManager;
 import lombok.NonNull;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;

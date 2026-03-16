@@ -1,6 +1,6 @@
 package com.raven.ravenz.utils.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.math.MatrixStack;
 import org.lwjgl.opengl.GL11;

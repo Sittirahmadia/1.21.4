@@ -1,6 +1,6 @@
 package com.raven.ravenz.module.modules.render;
 
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.raven.ravenz.event.impl.render.Render2DEvent;
 import com.raven.ravenz.module.Category;
 import com.raven.ravenz.module.Module;

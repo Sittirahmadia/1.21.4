@@ -11,7 +11,6 @@ import com.raven.ravenz.utils.render.blur.BlurRenderer;
 import com.raven.ravenz.utils.render.nanovg.NanoVGRenderer;
 import meteordevelopment.orbit.EventHandler;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -262,11 +261,11 @@ public final class TargetHUD extends Module {
     }
 
     private void renderItem(DrawContext context, ItemStack item, float x, float y) {
-        context.getMatrices().pushMatrix();
-        context.getMatrices().translate(x, y);
-        context.getMatrices().scale(ITEM_SCALE, ITEM_SCALE);
+        context.getMatrices().push();
+        context.getMatrices().translate(x, y, 0);
+        context.getMatrices().scale(ITEM_SCALE, ITEM_SCALE, 1f);
         context.drawItem(item, 0, 0);
-        context.getMatrices().popMatrix();
+        context.getMatrices().pop();
     }
 
     @EventHandler
@@ -376,17 +375,17 @@ public final class TargetHUD extends Module {
         int y = (int) (hudY + PADDING);
         
         var matrices = context.getMatrices();
-        matrices.pushMatrix();
+        matrices.push();
 
         context.enableScissor(x, y, x + HEAD_SIZE, y + HEAD_SIZE);
-        matrices.translate(x, y);
-        matrices.scale(HEAD_SCALE, HEAD_SCALE);
+        matrices.translate(x, y, 0);
+        matrices.scale(HEAD_SCALE, HEAD_SCALE, 1f);
 
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, texture, 0, 0, 8f, 8f, 8, 8, 64, 64);
-        context.drawTexture(RenderPipelines.GUI_TEXTURED, texture, 0, 0, 40f, 8f, 8, 8, 64, 64);
+        context.drawTexture(texture, 0, 0, 8f, 8f, 8, 8, 64, 64);
+        context.drawTexture(texture, 0, 0, 40f, 8f, 8, 8, 64, 64);
 
         context.disableScissor();
-        matrices.popMatrix();
+        matrices.pop();
     }
 
     private Identifier resolveSkin(PlayerEntity player) {

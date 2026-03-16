@@ -1,6 +1,6 @@
 package com.raven.ravenz.utils.render;
 
-import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.*;
 import com.raven.ravenz.utils.render.CompatShaders;
 import com.raven.ravenz.utils.render.font.util.BufferUtils;

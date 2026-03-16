@@ -15,7 +15,6 @@ import com.raven.ravenz.profiles.ProfileManager;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.client.render.RenderTickCounter;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.hit.HitResult;
 import org.spongepowered.asm.mixin.Final;
@@ -37,10 +36,6 @@ public class MinecraftClientMixin implements IMinecraft {
     public ClientPlayerEntity player;
     @Shadow
     public ClientPlayerInteractionManager interactionManager;
-    @Shadow
-    @Final
-    private RenderTickCounter renderTickCounter;
-
     @Inject(method = "getWindowTitle", at = @At("HEAD"), cancellable = true)
     public void setTitle(CallbackInfoReturnable<String> cir) {
         if (RavenZClient.INSTANCE == null || RavenZClient.mc == null) return;

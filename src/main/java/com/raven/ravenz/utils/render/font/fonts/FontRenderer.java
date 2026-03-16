@@ -2,7 +2,7 @@ package com.raven.ravenz.utils.render.font.fonts;
 
 import com.google.common.base.Preconditions;
 import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.vertex.VertexFormat.DrawMode;
+import net.minecraft.client.render.VertexFormat.DrawMode;
 import com.raven.ravenz.utils.render.font.util.BufferUtils;
 import com.raven.ravenz.utils.render.CompatShaders;
 import com.raven.ravenz.utils.render.font.util.Colors;

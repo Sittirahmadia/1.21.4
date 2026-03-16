@@ -8,11 +8,8 @@ import com.raven.ravenz.module.Module;
 import com.raven.ravenz.module.setting.*;
 import com.raven.ravenz.profiles.ProfileManager;
 import com.raven.ravenz.utils.render.nanovg.NanoVGRenderer;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.util.DefaultSkinHelper;
 import net.minecraft.text.Text;
@@ -874,10 +871,8 @@ public class RichModernGUI extends Screen {
 
     // ── Input ──────────────────────────────────────────────────────────────────
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // mouseX, mouseY, button already in params
         float sc = ease(anim) * guiScale();
         int cx = width / 2, cy = height / 2;
         float mx = tmx((float) mouseX, cx, sc), my = tmy((float) mouseY, cy, sc);
@@ -895,7 +890,7 @@ public class RichModernGUI extends Screen {
         if (clickRight (mx, my, gx + LEFT_W + MID_W + 1, gy, button)) return true;
 
         searchActive = false;
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private boolean clickDropdown(float mx, float my) {
@@ -1140,13 +1135,12 @@ public class RichModernGUI extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(Click click, double dX, double dY) {
-        double mouseX = click.x();
-        double mouseY = click.y();
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dX, double dY) {
+        // mouseX, mouseY already in params
         float sc = ease(anim) * guiScale();
         int cx = width / 2, cy = height / 2;
         float mx = tmx((float) mouseX, cx, sc);
-        int button = click.button();
+        // button already in params
         if (draggingNum != null) {
             float r = clamp((mx - numTrackX) / numTrackW, 0, 1);
             draggingNum.setValue(draggingNum.getMin() + r * (draggingNum.getMax() - draggingNum.getMin()));
@@ -1163,9 +1157,9 @@ public class RichModernGUI extends Screen {
     }
 
     @Override
-    public boolean mouseReleased(Click click) {
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
         draggingNum = null; draggingRange = null;
-        return super.mouseReleased(click);
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override
@@ -1206,9 +1200,9 @@ public class RichModernGUI extends Screen {
     }
 
     @Override
-    public boolean charTyped(CharInput input) {
-        char chr = (char) input.codepoint();
-        int modifiers = input.modifiers();
+    public boolean charTyped(char chr, int modifiers) {
+        // chr already in params
+        // modifiers already in params
         if (namingProfile) {
             if (Character.isLetterOrDigit(chr) || chr == '_' || chr == '-') {
                 newProfileName += chr; return true;
@@ -1216,14 +1210,14 @@ public class RichModernGUI extends Screen {
             return false;
         }
         if (searchActive) { search += chr; modScroll = 0; return true; }
-        return super.charTyped(input);
+        return super.charTyped(chr, modifiers);
     }
 
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.key();
-        int scanCode = input.scancode();
-        int modifiers = input.modifiers();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int key = keyCode;
+        // scanCode already in params
+        // modifiers already in params
         // Profile naming
         if (namingProfile) {
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
@@ -1263,7 +1257,7 @@ public class RichModernGUI extends Screen {
         }
 
         if (keyCode == GLFW.GLFW_KEY_ESCAPE) { close(); return true; }
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override public void  close()              { closing = true; }

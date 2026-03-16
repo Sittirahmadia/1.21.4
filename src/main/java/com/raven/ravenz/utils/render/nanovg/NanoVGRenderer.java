@@ -2,7 +2,6 @@ package com.raven.ravenz.utils.render.nanovg;
 
 import lombok.experimental.UtilityClass;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.RenderPipelines;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.util.Identifier;
 
@@ -213,7 +212,7 @@ public class NanoVGRenderer {
         if (id == null) return;
         int w = Math.max(1, Math.round(width));
         int h = Math.max(1, Math.round(height));
-        currentContext.drawTexture(RenderPipelines.GUI_TEXTURED, id,
+        currentContext.drawTexture(id,
                 Math.round(x), Math.round(y),
                 0f, 0f,
                 w, h,
@@ -236,7 +235,7 @@ public class NanoVGRenderer {
         if (!ready()) return;
         Identifier id = IMAGES.get(imageId);
         if (id == null) return;
-        currentContext.drawTexture(RenderPipelines.GUI_TEXTURED, id,
+        currentContext.drawTexture(id,
                 Math.round(destX), Math.round(destY),
                 srcX, srcY,
                 Math.max(1, Math.round(destW)), Math.max(1, Math.round(destH)),
@@ -245,22 +244,22 @@ public class NanoVGRenderer {
 
     public static void save() {
         if (!ready()) return;
-        currentContext.getMatrices().pushMatrix();
+        currentContext.getMatrices().push();
     }
 
     public static void restore() {
         if (!ready()) return;
-        currentContext.getMatrices().popMatrix();
+        currentContext.getMatrices().pop();
     }
 
     public static void translate(float x, float y) {
         if (!ready()) return;
-        currentContext.getMatrices().translate(x, y);
+        currentContext.getMatrices().translate(x, y, 0);
     }
 
     public static void scale(float x, float y) {
         if (!ready()) return;
-        currentContext.getMatrices().scale(x, y);
+        currentContext.getMatrices().scale(x, y, 1f);
     }
 
     public static void scissor(float x, float y, float width, float height) {
@@ -302,11 +301,11 @@ public class NanoVGRenderer {
         if (!ready() || text == null || text.isEmpty()) return;
         float scale = Math.max(0.01f, size / 9f);
         var matrices = currentContext.getMatrices();
-        matrices.pushMatrix();
-        matrices.translate(x, y);
-        matrices.scale(scale, scale);
+        matrices.push();
+        matrices.translate(x, y, 0);
+        matrices.scale(scale, scale, 1f);
         currentContext.drawText(MC.textRenderer, text, 0, 0, argb(color), shadow);
-        matrices.popMatrix();
+        matrices.pop();
     }
 
     private static Identifier parseIdentifier(String path) {

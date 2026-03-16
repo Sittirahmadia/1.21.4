@@ -3,11 +3,8 @@ package com.raven.ravenz.gui;
 import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.module.Module;
 import com.raven.ravenz.utils.render.nanovg.NanoVGRenderer;
-import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.CharInput;
-import net.minecraft.client.input.KeyInput;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -358,10 +355,10 @@ public class KeybindsScreen extends Screen {
     }
     
     @Override
-    public boolean mouseClicked(Click click, boolean doubleClick) {
-        double mouseX = click.x();
-        double mouseY = click.y();
-        int button = click.button();
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        double mouseX = mouseX;
+        double mouseY = mouseY;
+        int button = button;
         if (button != 0) return false;
         
         if (moduleSearchActive) {
@@ -445,8 +442,8 @@ public class KeybindsScreen extends Screen {
     }
     
     @Override
-    public boolean keyPressed(KeyInput input) {
-        int keyCode = input.key();
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        int keyCode = keyCode;
         if (moduleSearchActive) {
             return handlePopupKeyPress(keyCode);
         }
@@ -465,7 +462,7 @@ public class KeybindsScreen extends Screen {
             return true;
         }
         
-        return super.keyPressed(input);
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
     
     private boolean handlePopupKeyPress(int keyCode) {
@@ -487,14 +484,14 @@ public class KeybindsScreen extends Screen {
     
     
     @Override
-    public boolean charTyped(CharInput input) {
-        char chr = (char) input.codepoint();
+    public boolean charTyped(char chr, int modifiers) {
+        char chr = chr;
         if (moduleSearchActive && chr >= 32 && chr < 127) {
             searchQuery += chr;
             updateFilteredModules();
             return true;
         }
-        return super.charTyped(input);
+        return super.charTyped(chr, modifiers);
     }
     
     private void assignKeyToModule(Module module, int keyCode) {

@@ -5,7 +5,6 @@ import com.raven.ravenz.module.Module;
 import com.raven.ravenz.utils.keybinding.KeyUtils;
 import net.minecraft.client.Keyboard;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.input.KeyInput;
 import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -21,8 +20,7 @@ public class KeyboardMixin {
     private MinecraftClient client;
 
     @Inject(method = "onKey", at = @At("HEAD"))
-    private void onPress(long window, int action, KeyInput input, CallbackInfo ci) {
-        int key = input.getKeycode();
+    private void onPress(long window, int key, int scancode, int action, int mods, CallbackInfo ci) {
         if (window == this.client.getWindow().getHandle()) {
             if (this.client.currentScreen == null) {
                 for (Module module : RavenZClient.INSTANCE.moduleManager.getModules()) {

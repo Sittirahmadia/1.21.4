@@ -3,7 +3,7 @@ package com.raven.ravenz.mixin;
 import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.event.impl.render.Render2DEvent;
 import com.raven.ravenz.utils.render.RenderUtils;
-import com.mojang.blaze3d.opengl.GlStateManager;
+import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.hud.InGameHud;
 import net.minecraft.client.render.RenderTickCounter;
