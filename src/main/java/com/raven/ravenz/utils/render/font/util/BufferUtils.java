@@ -34,6 +34,5 @@ public final class BufferUtils {
             case DEBUG_LINES, DEBUG_LINE_STRIP -> RenderLayer.getLines();
             default -> RenderLayer.getGui();
         };
-    };
     }
 }
