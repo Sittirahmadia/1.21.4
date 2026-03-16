@@ -748,10 +748,10 @@ public class ColorPicker {
     private Matrix4f matrixFrom(DrawContext context) {
         var m = context.getMatrices();
         return new Matrix4f(
-                m.m00(), m.m01(), 0f, 0f,
-                m.m10(), m.m11(), 0f, 0f,
+                m.peek().getPositionMatrix().m00(), m.peek().getPositionMatrix().m01(), 0f, 0f,
+                m.peek().getPositionMatrix().m10(), m.peek().getPositionMatrix().m11(), 0f, 0f,
                 0f, 0f, 1f, 0f,
-                m.m20(), m.m21(), 0f, 1f
+                m.peek().getPositionMatrix().m20(), m.peek().getPositionMatrix().m21(), 0f, 1f
         );
     }
 }

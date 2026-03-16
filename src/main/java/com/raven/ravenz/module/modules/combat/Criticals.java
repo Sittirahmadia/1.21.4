@@ -25,8 +25,8 @@ public class Criticals extends Module {
 
         switch (mode.getMode()) {
             case "Vanilla" -> {
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getEntityPos().x, mc.player.getEntityPos().y + 0.2, mc.player.getEntityPos().z, false, false));
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getEntityPos().x, mc.player.getEntityPos().y + 0.1, mc.player.getEntityPos().z, false, false));
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getPos().x, mc.player.getPos().y + 0.2, mc.player.getPos().z, false, false));
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getPos().x, mc.player.getPos().y + 0.1, mc.player.getPos().z, false, false));
             }
             case "Watchdog Old" -> {
                 if (mc.player.isOnGround()) {
@@ -34,8 +34,8 @@ public class Criticals extends Module {
                 }
             }
             case "Mospixel" -> {
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getEntityPos().x, mc.player.getEntityPos().y + 0.000000271875, mc.player.getEntityPos().z, false, false));
-                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getEntityPos().x, mc.player.getEntityPos().y, mc.player.getEntityPos().z, false, false));
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getPos().x, mc.player.getPos().y + 0.000000271875, mc.player.getPos().z, false, false));
+                mc.player.networkHandler.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(mc.player.getPos().x, mc.player.getPos().y, mc.player.getPos().z, false, false));
             }
         }
     }

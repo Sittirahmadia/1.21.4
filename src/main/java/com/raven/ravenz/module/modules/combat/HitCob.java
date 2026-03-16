@@ -35,12 +35,12 @@ public class HitCob extends Module {
         if (mc.world.getBlockState(feetPos).getBlock() == Blocks.COBWEB) return;
         if (mc.world.getBlockState(feetPos).getBlock() == Blocks.WATER) return;
 
-        double distance = mc.player.getEntityPos().distanceTo(Vec3d.ofCenter(feetPos));
+        double distance = mc.player.getPos().distanceTo(Vec3d.ofCenter(feetPos));
         if (distance > 4.5) return;
 
         double targetSpeed = Math.hypot(target.getVelocity().x, target.getVelocity().z);
 
-        Vec3d knockbackDirection = target.getEntityPos().subtract(mc.player.getEntityPos()).normalize();
+        Vec3d knockbackDirection = target.getPos().subtract(mc.player.getPos()).normalize();
 
         double knockbackDistance;
         if (targetSpeed < SPEED_STOPPED) {
@@ -53,7 +53,7 @@ public class HitCob extends Module {
             knockbackDistance = mc.player.isSprinting() ? 1.0 : 0.7;
         }
 
-        Vec3d predictedPos = target.getEntityPos().add(knockbackDirection.multiply(knockbackDistance));
+        Vec3d predictedPos = target.getPos().add(knockbackDirection.multiply(knockbackDistance));
         BlockPos predictedFeet = BlockPos.ofFloored(predictedPos);
 
         if (mc.world.getBlockState(predictedFeet).getBlock() == Blocks.COBWEB) return;
@@ -66,7 +66,7 @@ public class HitCob extends Module {
         BlockPos groundPos = predictedFeet.down();
         if (mc.world.getBlockState(groundPos).isAir()) return;
 
-        if (mc.player.getEntityPos().distanceTo(Vec3d.ofCenter(predictedFeet)) > 4.5) return;
+        if (mc.player.getPos().distanceTo(Vec3d.ofCenter(predictedFeet)) > 4.5) return;
 
         int originalSlot = mc.player.getInventory().selectedSlot;
         float originalYaw = mc.player.getYaw();

@@ -827,12 +827,12 @@ public class RichModernGUI extends Screen {
             net.minecraft.util.Identifier skinId = null;
             if (client.getNetworkHandler() != null) {
                 PlayerListEntry entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
-                if (entry != null && entry.getSkinTextures() != null && entry.getSkinTextures().body() != null) {
-                    skinId = entry.getSkinTextures().body().texturePath();
+                if (entry != null && entry.getSkinTextures() != null && entry.getSkinTextures().texture() != null) {
+                    skinId = entry.getSkinTextures().texture();
                 }
             }
             if (skinId == null) {
-                skinId = DefaultSkinHelper.getSkinTextures(client.player.getUuid()).body().texturePath();
+                skinId = DefaultSkinHelper.getSkinTextures(client.player.getUuid()).texture();
             }
             if (skinId == null) return;
             String path = skinId.toString();
@@ -872,7 +872,6 @@ public class RichModernGUI extends Screen {
     // ── Input ──────────────────────────────────────────────────────────────────
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // mouseX, mouseY, button already in params
         float sc = ease(anim) * guiScale();
         int cx = width / 2, cy = height / 2;
         float mx = tmx((float) mouseX, cx, sc), my = tmy((float) mouseY, cy, sc);
@@ -1136,11 +1135,9 @@ public class RichModernGUI extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double dX, double dY) {
-        // mouseX, mouseY already in params
         float sc = ease(anim) * guiScale();
         int cx = width / 2, cy = height / 2;
         float mx = tmx((float) mouseX, cx, sc);
-        // button already in params
         if (draggingNum != null) {
             float r = clamp((mx - numTrackX) / numTrackW, 0, 1);
             draggingNum.setValue(draggingNum.getMin() + r * (draggingNum.getMax() - draggingNum.getMin()));
@@ -1153,7 +1150,7 @@ public class RichModernGUI extends Screen {
             else                  draggingRange.setMaxValue(v);
             return true;
         }
-        return super.mouseDragged(click, dX, dY);
+        return super.mouseDragged(mouseX, mouseY, button, dX, dY);
     }
 
     @Override
@@ -1202,7 +1199,6 @@ public class RichModernGUI extends Screen {
     @Override
     public boolean charTyped(char chr, int modifiers) {
         // chr already in params
-        // modifiers already in params
         if (namingProfile) {
             if (Character.isLetterOrDigit(chr) || chr == '_' || chr == '-') {
                 newProfileName += chr; return true;
@@ -1216,8 +1212,6 @@ public class RichModernGUI extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         int key = keyCode;
-        // scanCode already in params
-        // modifiers already in params
         // Profile naming
         if (namingProfile) {
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {

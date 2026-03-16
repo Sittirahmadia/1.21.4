@@ -342,7 +342,6 @@ public class NewClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;
@@ -395,7 +394,6 @@ public class NewClickGUI extends Screen {
     @Override
     public boolean charTyped(char chr, int modifiers) {
         // chr already in params
-        // modifiers already in params
         if (configPanel != null && configPanel.charTyped(chr, modifiers)) {
             return true;
         }
@@ -435,8 +433,6 @@ public class NewClickGUI extends Screen {
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         int key = keyCode;
-        // scanCode already in params
-        // modifiers already in params
         if (configPanel != null && configPanel.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
@@ -463,7 +459,6 @@ public class NewClickGUI extends Screen {
 
     @Override
     public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;
@@ -483,7 +478,6 @@ public class NewClickGUI extends Screen {
 
     @Override
     public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        // mouseX, mouseY, button already in params
         float guiScale = getGuiScaleMultiplier();
         float scale = easeOutCubic(animationProgress);
         int centerX = width / 2;
@@ -500,7 +494,7 @@ public class NewClickGUI extends Screen {
                 return true;
             }
         }
-        return super.mouseDragged(click, deltaX, deltaY);
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override

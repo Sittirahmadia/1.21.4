@@ -12,7 +12,7 @@ public final class CombatUtil implements IMinecraft {
         if (mc.player == null || target == null) return false;
 
         Vec3d playerPos = mc.player.getEyePos();
-        Vec3d targetPos = target.getEntityPos();
+        Vec3d targetPos = target.getPos();
 
         Vec3d toPlayer = playerPos.subtract(targetPos);
         Vec3d toPlayerHorizontal = new Vec3d(toPlayer.x, 0.0, toPlayer.z);

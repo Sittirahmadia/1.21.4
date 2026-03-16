@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.client.render.RenderLayer;
 
 public class RavenScreen extends Screen {
 
@@ -305,7 +306,7 @@ public class RavenScreen extends Screen {
         int y = cardY + 14;
 
         if (loadedLogoId != null) {
-            context.drawTexture(loadedLogoId, x, y, 0f, 0f, size, size, size, size);
+            context.drawTexture(RenderLayer::getGuiTextured, loadedLogoId, x, y, 0f, 0f, size, size, size, size);
             return;
         }
 
@@ -609,8 +610,6 @@ public class RavenScreen extends Screen {
         updateLayout();
         rebuildHitboxes();
 
-        // mouseX, mouseY, button already in params
-
         if (listeningKeybind != null) {
             listeningKeybind.setKeyCode(button);
             listeningKeybind = null;
@@ -766,8 +765,6 @@ public class RavenScreen extends Screen {
         updateLayout();
         rebuildHitboxes();
 
-        double mouseX = mouseX;
-
         if (draggingNumberSetting != null) {
             applyNumberFromMouse(draggingNumberSetting, mouseX);
             return true;
@@ -783,7 +780,7 @@ public class RavenScreen extends Screen {
             return true;
         }
 
-        return super.mouseDragged(click, deltaX, deltaY);
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
     }
 
     @Override
@@ -795,7 +792,7 @@ public class RavenScreen extends Screen {
         draggingColorSetting = null;
         draggingColorChannel = -1;
 
-        return consumed || super.mouseReleased(click);
+        return consumed || super.mouseReleased(mouseX, mouseY, button);
     }
 
     @Override

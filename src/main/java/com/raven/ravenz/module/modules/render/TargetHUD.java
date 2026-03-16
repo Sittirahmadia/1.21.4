@@ -23,6 +23,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
 import java.util.concurrent.ThreadLocalRandom;
+import net.minecraft.client.render.RenderLayer;
 
 public final class TargetHUD extends Module {
     private static final int BASE_WIDTH = 120;
@@ -216,7 +217,7 @@ public final class TargetHUD extends Module {
     }
 
     private void updateHealthAnimation(float targetHealthPercent) {
-        float deltaTime = mc.getRenderTickCounter().getTickProgress(true) / 20f;
+        float deltaTime = mc.getRenderTickCounter().getDeltaTicks() / 20f;
 
         if (Math.abs(targetHealthPercent - lastHealthPercent) > 0.001f) {
             lastHealthPercent = targetHealthPercent;
@@ -311,7 +312,7 @@ public final class TargetHUD extends Module {
 
     private void renderParticles(int screenWidth, int screenHeight) {
         long now = System.currentTimeMillis();
-        float deltaTime = mc.getRenderTickCounter().getTickProgress(true) / 20f;
+        float deltaTime = mc.getRenderTickCounter().getDeltaTicks() / 20f;
 
         Iterator<Particle> it = particleQueue.iterator();
         while (it.hasNext()) {
@@ -381,8 +382,8 @@ public final class TargetHUD extends Module {
         matrices.translate(x, y, 0);
         matrices.scale(HEAD_SCALE, HEAD_SCALE, 1f);
 
-        context.drawTexture(texture, 0, 0, 8f, 8f, 8, 8, 64, 64);
-        context.drawTexture(texture, 0, 0, 40f, 8f, 8, 8, 64, 64);
+        context.drawTexture(RenderLayer::getGuiTextured, texture, 0, 0, 8f, 8f, 8, 8, 64, 64);
+        context.drawTexture(RenderLayer::getGuiTextured, texture, 0, 0, 40f, 8f, 8, 8, 64, 64);
 
         context.disableScissor();
         matrices.pop();

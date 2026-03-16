@@ -356,9 +356,6 @@ public class KeybindsScreen extends Screen {
     
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        double mouseX = mouseX;
-        double mouseY = mouseY;
-        int button = button;
         if (button != 0) return false;
         
         if (moduleSearchActive) {
@@ -376,7 +373,7 @@ public class KeybindsScreen extends Screen {
             return true;
         }
         
-        return super.mouseClicked(click, doubleClick);
+        return super.mouseClicked(mouseX, mouseY, button);
     }
     
     private boolean handlePopupClick(double mouseX, double mouseY) {
@@ -443,7 +440,6 @@ public class KeybindsScreen extends Screen {
     
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        int keyCode = keyCode;
         if (moduleSearchActive) {
             return handlePopupKeyPress(keyCode);
         }
@@ -485,7 +481,6 @@ public class KeybindsScreen extends Screen {
     
     @Override
     public boolean charTyped(char chr, int modifiers) {
-        char chr = chr;
         if (moduleSearchActive && chr >= 32 && chr < 127) {
             searchQuery += chr;
             updateFilteredModules();

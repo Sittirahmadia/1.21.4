@@ -3,7 +3,6 @@ package com.raven.ravenz.utils.render;
 import com.mojang.blaze3d.platform.GlStateManager;
 import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.BufferBuilder;
-import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.gui.DrawContext;
@@ -13,6 +12,7 @@ import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 
 import com.raven.ravenz.utils.render.font.util.BufferUtils;
+import net.minecraft.client.render.RenderLayer;
 
 public final class TextureRenderer {
     private TextureRenderer() {
@@ -76,7 +76,7 @@ public final class TextureRenderer {
         buffer.vertex(matrix, halfWidth, halfHeight, 0.0f).texture(1.0f, 1.0f).color(r, g, b, a);
         buffer.vertex(matrix, halfWidth, -halfHeight, 0.0f).texture(1.0f, 0.0f).color(r, g, b, a);
         buffer.vertex(matrix, -halfWidth, -halfHeight, 0.0f).texture(0.0f, 0.0f).color(r, g, b, a);
-        BufferUtils.draw(buffer, RenderLayers.entityTranslucent(texture));
+        BufferUtils.draw(buffer, RenderLayer.getEntityTranslucent(texture, true));
 
         if (linearFilter) {
             disableLinearFiltering();
@@ -105,7 +105,7 @@ public final class TextureRenderer {
             enableLinearFiltering();
         }
 
-        context.drawTexture(texture, left, top, 0f, 0f, w, h, w, h);
+        context.drawTexture(RenderLayer::getGuiTextured, texture, left, top, 0f, 0f, w, h, w, h);
 
         if (linearFilter) {
             disableLinearFiltering();

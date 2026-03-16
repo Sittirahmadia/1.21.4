@@ -8,6 +8,7 @@ import net.minecraft.util.Identifier;
 import java.awt.Color;
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.client.render.RenderLayer;
 
 @UtilityClass
 public class NanoVGRenderer {
@@ -212,7 +213,7 @@ public class NanoVGRenderer {
         if (id == null) return;
         int w = Math.max(1, Math.round(width));
         int h = Math.max(1, Math.round(height));
-        currentContext.drawTexture(id,
+        currentContext.drawTexture(RenderLayer::getGuiTextured, id,
                 Math.round(x), Math.round(y),
                 0f, 0f,
                 w, h,
@@ -235,7 +236,7 @@ public class NanoVGRenderer {
         if (!ready()) return;
         Identifier id = IMAGES.get(imageId);
         if (id == null) return;
-        currentContext.drawTexture(id,
+        currentContext.drawTexture(RenderLayer::getGuiTextured, id,
                 Math.round(destX), Math.round(destY),
                 srcX, srcY,
                 Math.max(1, Math.round(destW)), Math.max(1, Math.round(destH)),

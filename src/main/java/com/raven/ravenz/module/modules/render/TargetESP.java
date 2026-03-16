@@ -53,7 +53,7 @@ public final class TargetESP extends Module {
         }
 
         MatrixStack stack = event.getMatrixStack();
-        float tickDelta = mc.getRenderTickCounter().getTickProgress(true);
+        float tickDelta = mc.getRenderTickCounter().getDeltaTicks();
 
         GlStateManager._enableBlend();
         GlStateManager._blendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE, GL11.GL_ONE);

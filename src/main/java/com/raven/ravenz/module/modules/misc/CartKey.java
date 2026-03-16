@@ -77,7 +77,7 @@ public final class CartKey extends Module {
         if (!(mc.crosshairTarget instanceof BlockHitResult hit)) return false;
         BlockPos pos = hit.getBlockPos().offset(hit.getSide());
         return mc.world != null && mc.player != null &&
-                mc.player.getEntityPos().distanceTo(pos.toCenterPos()) <= 4.5 &&
+                mc.player.getPos().distanceTo(pos.toCenterPos()) <= 4.5 &&
                 mc.world.getBlockState(pos).isAir() &&
                 hasItem(Items.RAIL) && hasItem(Items.TNT_MINECART);
     }

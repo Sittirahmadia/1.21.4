@@ -20,7 +20,7 @@ public class W2SUtil {
         }
         
         Camera camera = mc.getEntityRenderDispatcher().camera;
-        Vec3d cameraPos = camera.getCameraPos();
+        Vec3d cameraPos = camera.getPos();
         
         return getCoords(vector, cameraPos);
     }

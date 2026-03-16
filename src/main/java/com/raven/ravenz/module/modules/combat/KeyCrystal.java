@@ -170,7 +170,7 @@ public final class KeyCrystal extends Module {
 
         if (mc.crosshairTarget instanceof EntityHitResult entityHit && breakTimer.hasElapsedTime(currentBreakDelay)) {
             if (entityHit.getEntity() instanceof EndCrystalEntity crystal && randomInt <= breakChance.getValueInt()) {
-                if (mc.player.getEntityPos().distanceTo(crystal.getEntityPos()) <= 6.0) {
+                if (mc.player.getPos().distanceTo(crystal.getPos()) <= 6.0) {
                     if (antiWeakness.getValue() && mc.player.hasStatusEffect(StatusEffects.WEAKNESS)) {
                         InventoryUtil.swapToSword();
                     } else {
@@ -224,7 +224,7 @@ public final class KeyCrystal extends Module {
 
     private boolean isValidPosition(BlockPos pos) {
         if (mc.world == null) return false;
-        if (mc.player.getEntityPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
+        if (mc.player.getPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
         if (!mc.world.getBlockState(pos).isAir()) return false;
 
         BlockPos playerPos = mc.player.getBlockPos();
@@ -239,7 +239,7 @@ public final class KeyCrystal extends Module {
 
     private boolean isValidCrystalPosition(BlockPos pos) {
         if (mc.world == null) return false;
-        if (mc.player.getEntityPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
+        if (mc.player.getPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
         if (!mc.world.getBlockState(pos).isAir()) return false;
         if (!mc.world.getBlockState(pos.up()).isAir()) return false;
 

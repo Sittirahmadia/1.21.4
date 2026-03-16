@@ -4,7 +4,6 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BuiltBuffer;
 import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.RenderLayers;
 
 public final class BufferUtils {
     private BufferUtils() {
@@ -32,11 +31,9 @@ public final class BufferUtils {
 
     private static RenderLayer selectDefaultLayer(VertexFormat.DrawMode mode) {
         return switch (mode) {
-            case DEBUG_LINES -> RenderLayers.linesTranslucent();
-            case TRIANGLES -> RenderLayers.debugFilledBox();
-            case TRIANGLE_FAN -> RenderLayers.debugTriangleFan();
-            case QUADS -> RenderLayers.debugQuads();
-            default -> RenderLayers.debugQuads();
+            case DEBUG_LINES, DEBUG_LINE_STRIP -> RenderLayer.getLines();
+            default -> RenderLayer.getGui();
         };
+    };
     }
 }

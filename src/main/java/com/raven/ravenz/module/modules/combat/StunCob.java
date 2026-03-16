@@ -66,7 +66,7 @@ public class StunCob extends Module {
     private Vec3d predictLandingPosition(Entity target) {
         if (!(target instanceof LivingEntity)) return null;
         
-        Vec3d currentPos = target.getEntityPos();
+        Vec3d currentPos = target.getPos();
         Vec3d velocity = target.getVelocity();
         
         boolean isSprinting = mc.player.isSprinting();
@@ -113,7 +113,7 @@ public class StunCob extends Module {
         if (!mc.world.getBlockState(pos).isAir()) return false;
         if (!mc.world.getBlockState(pos.down()).isSolidBlock(mc.world, pos.down())) return false;
         
-        double distance = mc.player.getEntityPos().distanceTo(new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5));
+        double distance = mc.player.getPos().distanceTo(new Vec3d(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5));
         return distance <= 4.5;
     }
     

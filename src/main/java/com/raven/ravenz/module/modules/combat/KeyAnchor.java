@@ -167,7 +167,7 @@ public final class KeyAnchor extends Module {
 
     private boolean isValidAnchorPosition(BlockPos pos) {
         if (mc.world == null || mc.player == null) return false;
-        if (mc.player.getEntityPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
+        if (mc.player.getPos().distanceTo(Vec3d.ofCenter(pos)) > 4.5) return false;
         if (!mc.world.getBlockState(pos).isAir()) return false;
         BlockPos playerPos = mc.player.getBlockPos();
         return !pos.equals(playerPos) && !pos.equals(playerPos.up());

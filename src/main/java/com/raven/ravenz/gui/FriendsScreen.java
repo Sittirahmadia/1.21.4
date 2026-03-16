@@ -58,8 +58,8 @@ public class FriendsScreen extends Screen {
         for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
             if (entry.getProfile() == null)
                 continue;
-            String name = entry.getProfile().name();
-            UUID uuid = entry.getProfile().id();
+            String name = entry.getProfile().getName();
+            UUID uuid = entry.getProfile().getId();
 
             if (searchQuery.isEmpty() || name.toLowerCase().contains(searchQuery.toLowerCase())) {
                 playerEntries.add(new PlayerEntry(name, uuid));
@@ -261,7 +261,6 @@ public class FriendsScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // mouseX, mouseY, button already in params
         int panelX = (width - PANEL_WIDTH) / 2;
         int panelY = (height - PANEL_HEIGHT) / 2;
 

@@ -44,8 +44,8 @@ public final class ArrowESP extends Module {
         float centerX = width * 0.5f;
         float centerY = height * 0.5f;
 
-        float tickDelta = mc.getRenderTickCounter().getTickProgress(true);
-        Vec3d cameraPos = mc.gameRenderer.getCamera().getCameraPos();
+        float tickDelta = mc.getRenderTickCounter().getDeltaTicks();
+        Vec3d cameraPos = mc.gameRenderer.getCamera().getPos();
         float cameraYaw = mc.gameRenderer.getCamera().getYaw();
 
         GlStateManager._disableDepthTest();
