@@ -2,7 +2,6 @@ package com.raven.ravenz.mixin;
 
 import com.raven.ravenz.RavenZClient;
 import com.raven.ravenz.event.impl.render.Render3DEvent;
-import com.raven.ravenz.module.modules.render.AspectRatio;
 import com.raven.ravenz.utils.render.W2SUtil;
 import com.raven.ravenz.utils.render.font.util.RendererUtils;
 import com.mojang.blaze3d.systems.RenderSystem;
@@ -16,20 +15,10 @@ import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
 
 @Mixin(GameRenderer.class)
 public class GameRendererMixin {
-
-    @ModifyArgs(method = "getBasicProjectionMatrix", at = @At(value = "INVOKE", target = "Lorg/joml/Matrix4f;perspective(FFFF)Lorg/joml/Matrix4f;"))
-    private void modifyAspectRatio(Args args) {
-        float customRatio = AspectRatio.getAspectRatio();
-        if (customRatio > 0) {
-            args.set(1, customRatio);
-        }
-    }
 
     @Inject(method = "renderWorld", at = @At("HEAD"))
     private void renderHand(RenderTickCounter tickCounter, CallbackInfo ci) {
@@ -98,6 +87,4 @@ public class GameRendererMixin {
         }
         return null;
     }
-
-
 }
