@@ -1,10 +1,10 @@
 package com.raven.ravenz.module.modules.combat;
 
 import com.raven.ravenz.event.impl.player.TickEvent;
-import com.raven.ravenz.module.Module;
 import com.raven.ravenz.module.Category;
-import com.raven.ravenz.module.setting.settings.BooleanSetting;
-import com.raven.ravenz.module.setting.settings.NumberSetting;
+import com.raven.ravenz.module.Module;
+import com.raven.ravenz.module.setting.BooleanSetting;
+import com.raven.ravenz.module.setting.NumberSetting;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.decoration.EndCrystalEntity;
@@ -15,16 +15,13 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.fabricmc.fabric.api.event.Event;
-
-import java.lang.reflect.Method;
+import org.lwjgl.glfw.GLFW;
 
 public class AutoCrystal extends Module {
 
     private final BooleanSetting onRmb = new BooleanSetting("On RMB", false);
-    private final NumberSetting placeDelay = new NumberSetting("Place Delay", 1, 0, 10, 1);
-    private final NumberSetting breakDelay = new NumberSetting("Break Delay", 1, 0, 10, 1);
+    private final NumberSetting placeDelay = new NumberSetting("Place Delay", 0, 10, 1, 1);
+    private final NumberSetting breakDelay = new NumberSetting("Break Delay", 0, 10, 1, 1);
 
     private int tickTimer = 0;
 
@@ -33,15 +30,14 @@ public class AutoCrystal extends Module {
         addSettings(onRmb, placeDelay, breakDelay);
     }
 
-    // Event handler — sesuaikan annotation dengan event system RavenZ
     public void onTick(TickEvent event) {
         if (isNull()) return;
         if (mc.currentScreen != null) return;
 
-        if (onRmb.isEnabled()) {
+        if (onRmb.getValue()) {
             long window = mc.getWindow().getHandle();
-            if (org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
-                    != org.lwjgl.glfw.GLFW.GLFW_PRESS) return;
+            if (GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) != GLFW.GLFW_PRESS)
+                return;
         }
 
         placeCrystal();
@@ -73,7 +69,7 @@ public class AutoCrystal extends Module {
     }
 
     private void placeCrystal() {
-        if (!passedTicks(placeDelay.getIValue())) return;
+        if (!passedTicks(placeDelay.getValueInt())) return;
         if (!mc.player.getMainHandStack().isOf(Items.END_CRYSTAL)) return;
 
         HitResult hit = getRaycast();
@@ -104,7 +100,7 @@ public class AutoCrystal extends Module {
     }
 
     private void breakCrystal() {
-        if (!passedTicks(breakDelay.getIValue())) return;
+        if (!passedTicks(breakDelay.getValueInt())) return;
 
         HitResult hit = getRaycast();
         if (!(hit instanceof EntityHitResult entityHit)) return;
