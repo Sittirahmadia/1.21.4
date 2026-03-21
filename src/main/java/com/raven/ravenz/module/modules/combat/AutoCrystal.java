@@ -56,7 +56,8 @@ public class AutoCrystal extends Module {
     private HitResult getRaycast() {
         HitResult hit = mc.crosshairTarget;
         if (hit == null || hit.getType() == HitResult.Type.MISS) {
-            hit = mc.player.raycast(4.5, mc.getTickDelta(), false);
+            // Fixed: getRenderTickCounter().getTickDelta(true) untuk 1.21.4
+            hit = mc.player.raycast(4.5, mc.getRenderTickCounter().getTickDelta(true), false);
         }
         return hit;
     }
@@ -85,10 +86,9 @@ public class AutoCrystal extends Module {
                 false
         );
 
-        // Fixed for 1.21.4: mc.world as second parameter
+        // Fixed: tanpa mc.world (versi mappings RavenZ)
         ActionResult result = mc.interactionManager.interactBlock(
                 mc.player,
-                mc.world,
                 Hand.MAIN_HAND,
                 fixedHit
         );
