@@ -1,36 +1,55 @@
-package net.caffeinemc.phosphor.module.modules.combat;
+package com.raven.ravenz.module.modules.combat;
 
-import net.caffeinemc.phosphor.api.event.events.PlayerTickEvent;
-import net.caffeinemc.phosphor.api.event.orbit.EventHandler;
-import net.caffeinemc.phosphor.api.util.KeyUtils;
-import net.caffeinemc.phosphor.common.Phosphor;
-import net.caffeinemc.phosphor.module.Module;
-import net.caffeinemc.phosphor.module.setting.settings.BooleanSetting;
-import net.caffeinemc.phosphor.module.setting.settings.NumberSetting;
+import com.raven.ravenz.event.impl.player.TickEvent;
+import com.raven.ravenz.module.Module;
+import com.raven.ravenz.module.Category;
+import com.raven.ravenz.module.setting.settings.BooleanSetting;
+import com.raven.ravenz.module.setting.settings.NumberSetting;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.decoration.EndCrystalEntity;
 import net.minecraft.item.Items;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
-import net.minecraft.util.hit.*;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
+import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import org.lwjgl.glfw.GLFW;
+import net.minecraft.util.math.Vec3d;
+import net.fabricmc.fabric.api.event.Event;
 
-public class AutoCrystalModule extends Module {
+import java.lang.reflect.Method;
 
-    private final BooleanSetting clickSimulation = new BooleanSetting("Click Simulation", this, true);
-    public final BooleanSetting onRmb = new BooleanSetting("On RMB", this, false);
-    public final NumberSetting placeDelay = new NumberSetting("Place Delay", this, 1, 0, 10, 1);
-    public final NumberSetting breakDelay = new NumberSetting("Break Delay", this, 1, 0, 10, 1);
+public class AutoCrystal extends Module {
 
-    private int tickTimer;
+    private final BooleanSetting onRmb = new BooleanSetting("On RMB", false);
+    private final NumberSetting placeDelay = new NumberSetting("Place Delay", 1, 0, 10, 1);
+    private final NumberSetting breakDelay = new NumberSetting("Break Delay", 1, 0, 10, 1);
 
-    public AutoCrystalModule() {
+    private int tickTimer = 0;
+
+    public AutoCrystal() {
         super("AutoCrystal", "Automatically places and breaks crystals", Category.COMBAT);
+        addSettings(onRmb, placeDelay, breakDelay);
     }
 
-    private boolean passedTicks(double time) {
+    // Event handler — sesuaikan annotation dengan event system RavenZ
+    public void onTick(TickEvent event) {
+        if (isNull()) return;
+        if (mc.currentScreen != null) return;
+
+        if (onRmb.isEnabled()) {
+            long window = mc.getWindow().getHandle();
+            if (org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT)
+                    != org.lwjgl.glfw.GLFW.GLFW_PRESS) return;
+        }
+
+        placeCrystal();
+        breakCrystal();
+        tickTimer++;
+    }
+
+    private boolean passedTicks(int time) {
         return tickTimer >= time;
     }
 
@@ -40,95 +59,60 @@ public class AutoCrystalModule extends Module {
 
     private HitResult getRaycast() {
         HitResult hit = mc.crosshairTarget;
-
         if (hit == null || hit.getType() == HitResult.Type.MISS) {
             hit = mc.player.raycast(4.5, mc.getTickDelta(), false);
         }
-
         return hit;
     }
 
     private boolean canPlace(BlockPos pos) {
         BlockState base = mc.world.getBlockState(pos);
-
         if (!(base.isOf(Blocks.OBSIDIAN) || base.isOf(Blocks.BEDROCK)))
             return false;
-
         return mc.world.isAir(pos.up()) && mc.world.isAir(pos.up(2));
     }
 
     private void placeCrystal() {
-        if (!passedTicks(placeDelay.getIValue()))
-            return;
-
-        if (!mc.player.getMainHandStack().isOf(Items.END_CRYSTAL))
-            return;
+        if (!passedTicks(placeDelay.getIValue())) return;
+        if (!mc.player.getMainHandStack().isOf(Items.END_CRYSTAL)) return;
 
         HitResult hit = getRaycast();
+        if (!(hit instanceof BlockHitResult blockHit)) return;
 
-        if (hit instanceof BlockHitResult blockHit) {
-            BlockPos pos = blockHit.getBlockPos();
+        BlockPos pos = blockHit.getBlockPos();
+        if (!canPlace(pos)) return;
 
-            if (!canPlace(pos))
-                return;
+        BlockHitResult fixedHit = new BlockHitResult(
+                blockHit.getPos(),
+                blockHit.getSide(),
+                pos,
+                false
+        );
 
-            BlockHitResult fixedHit = new BlockHitResult(
-                    blockHit.getPos(),
-                    blockHit.getSide(),
-                    pos,
-                    false
-            );
+        // Fixed for 1.21.4: mc.world as second parameter
+        ActionResult result = mc.interactionManager.interactBlock(
+                mc.player,
+                mc.world,
+                Hand.MAIN_HAND,
+                fixedHit
+        );
 
-            if (clickSimulation.isEnabled())
-                Phosphor.mouseSimulation().mouseClick(GLFW.GLFW_MOUSE_BUTTON_RIGHT);
+        if (result.isAccepted())
+            mc.player.swingHand(Hand.MAIN_HAND);
 
-            // Fixed for 1.21.4: added mc.world parameter
-            ActionResult result = mc.interactionManager.interactBlock(
-                    mc.player,
-                    mc.world,
-                    Hand.MAIN_HAND,
-                    fixedHit
-            );
-
-            if (result.isAccepted())
-                mc.player.swingHand(Hand.MAIN_HAND);
-
-            reset();
-        }
+        reset();
     }
 
     private void breakCrystal() {
-        if (!passedTicks(breakDelay.getIValue()))
-            return;
+        if (!passedTicks(breakDelay.getIValue())) return;
 
         HitResult hit = getRaycast();
+        if (!(hit instanceof EntityHitResult entityHit)) return;
 
-        if (hit instanceof EntityHitResult entityHit) {
-            if (entityHit.getEntity() instanceof EndCrystalEntity crystal) {
-
-                if (clickSimulation.isEnabled())
-                    Phosphor.mouseSimulation().mouseClick(GLFW.GLFW_MOUSE_BUTTON_LEFT);
-
-                mc.interactionManager.attackEntity(mc.player, crystal);
-                mc.player.swingHand(Hand.MAIN_HAND);
-
-                reset();
-            }
+        if (entityHit.getEntity() instanceof EndCrystalEntity crystal) {
+            mc.interactionManager.attackEntity(mc.player, crystal);
+            mc.player.swingHand(Hand.MAIN_HAND);
+            reset();
         }
-    }
-
-    @EventHandler
-    public void onPlayerTick(PlayerTickEvent event) {
-
-        if (onRmb.isEnabled() && !KeyUtils.isKeyPressed(GLFW.GLFW_MOUSE_BUTTON_RIGHT))
-            return;
-
-        if (mc.currentScreen != null)
-            return;
-
-        placeCrystal();
-        breakCrystal();
-
-        tickTimer++;
     }
 }
