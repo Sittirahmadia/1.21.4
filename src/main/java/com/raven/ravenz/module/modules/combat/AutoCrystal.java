@@ -5,6 +5,7 @@ import com.raven.ravenz.module.Category;
 import com.raven.ravenz.module.Module;
 import com.raven.ravenz.module.setting.BooleanSetting;
 import com.raven.ravenz.module.setting.NumberSetting;
+import meteordevelopment.orbit.EventHandler;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.entity.decoration.EndCrystalEntity;
@@ -23,14 +24,17 @@ public class AutoCrystal extends Module {
     private final NumberSetting placeDelay = new NumberSetting("Place Delay", 0, 10, 1, 1);
     private final NumberSetting breakDelay = new NumberSetting("Break Delay", 0, 10, 1, 1);
 
-    private int tickTimer = 0;
+    // Timer dipisah biar place dan break tidak saling ganggu
+    private int placeTimer = 0;
+    private int breakTimer = 0;
 
     public AutoCrystal() {
         super("AutoCrystal", "Automatically places and breaks crystals", Category.COMBAT);
         addSettings(onRmb, placeDelay, breakDelay);
     }
 
-    public void onTick(TickEvent event) {
+    @EventHandler
+    private void onTick(TickEvent event) {
         if (isNull()) return;
         if (mc.currentScreen != null) return;
 
@@ -40,23 +44,29 @@ public class AutoCrystal extends Module {
                 return;
         }
 
-        placeCrystal();
+        // Break dulu sebelum place supaya cycle lebih cepat
         breakCrystal();
-        tickTimer++;
+        placeCrystal();
+
+        placeTimer++;
+        breakTimer++;
     }
 
-    private boolean passedTicks(int time) {
-        return tickTimer >= time;
+    @Override
+    public void onEnable() {
+        placeTimer = 0;
+        breakTimer = 0;
     }
 
-    private void reset() {
-        tickTimer = 0;
+    @Override
+    public void onDisable() {
+        placeTimer = 0;
+        breakTimer = 0;
     }
 
     private HitResult getRaycast() {
         HitResult hit = mc.crosshairTarget;
         if (hit == null || hit.getType() == HitResult.Type.MISS) {
-            // Fixed: getRenderTickCounter().getTickDelta(true) untuk 1.21.4
             hit = mc.player.raycast(4.5, mc.getRenderTickCounter().getTickDelta(true), false);
         }
         return hit;
@@ -70,7 +80,7 @@ public class AutoCrystal extends Module {
     }
 
     private void placeCrystal() {
-        if (!passedTicks(placeDelay.getValueInt())) return;
+        if (placeTimer < placeDelay.getValueInt()) return;
         if (!mc.player.getMainHandStack().isOf(Items.END_CRYSTAL)) return;
 
         HitResult hit = getRaycast();
@@ -86,7 +96,6 @@ public class AutoCrystal extends Module {
                 false
         );
 
-        // Fixed: tanpa mc.world (versi mappings RavenZ)
         ActionResult result = mc.interactionManager.interactBlock(
                 mc.player,
                 Hand.MAIN_HAND,
@@ -96,11 +105,11 @@ public class AutoCrystal extends Module {
         if (result.isAccepted())
             mc.player.swingHand(Hand.MAIN_HAND);
 
-        reset();
+        placeTimer = 0;
     }
 
     private void breakCrystal() {
-        if (!passedTicks(breakDelay.getValueInt())) return;
+        if (breakTimer < breakDelay.getValueInt()) return;
 
         HitResult hit = getRaycast();
         if (!(hit instanceof EntityHitResult entityHit)) return;
@@ -108,7 +117,7 @@ public class AutoCrystal extends Module {
         if (entityHit.getEntity() instanceof EndCrystalEntity crystal) {
             mc.interactionManager.attackEntity(mc.player, crystal);
             mc.player.swingHand(Hand.MAIN_HAND);
-            reset();
+            breakTimer = 0;
         }
     }
 }
