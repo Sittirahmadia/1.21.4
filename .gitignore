@@ -1,0 +1,13 @@
+.gradle/
+build/
+*.class
+*.jar
+*.log
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+run/
+.fabric/
+remappedSrc/

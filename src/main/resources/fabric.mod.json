@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "crystalspk",
+  "version": "${version}",
+  "name": "CrystalSpK Macro",
+  "description": "In-game macro system for crystal PvP, sword, mace, cart and UHC macros with GUI keybind configuration.",
+  "authors": ["CrystalSpK"],
+  "contact": {},
+  "license": "MIT",
+  "icon": "assets/crystalspk/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.crystalspk.CrystalSpKMod"]
+  },
+  "mixins": ["crystalspk.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "minecraft": "~1.21.4",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
