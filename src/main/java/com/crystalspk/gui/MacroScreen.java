@@ -189,7 +189,7 @@ public class MacroScreen extends Screen {
 
             boolean expanded = def.id.equals(expandedMacro);
             boolean isActive = entry.active;
-            int fieldCount = 2 + def.slotNames.size();
+            int fieldCount = 3 + def.slotNames.size(); // hotkey + delay + mode + slots
             int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
 
             // Skip cards fully outside view
@@ -297,6 +297,11 @@ public class MacroScreen extends Screen {
             fy = drawFieldRow(ctx, x, fy, w, "Delay", delVal, mouseX, mouseY, delEditing);
             fy += FIELD_H + 3;
 
+            // Mode field (click to cycle: Single → Hold → Loop)
+            String modeName = MacroConfig.MODE_NAMES[entry.mode];
+            fy = drawFieldRow(ctx, x, fy, w, "Mode", modeName, mouseX, mouseY, false);
+            fy += FIELD_H + 3;
+
             // Slots
             for (String slot : def.slotNames) {
                 String label = formatSlotLabel(slot);
@@ -352,7 +357,7 @@ public class MacroScreen extends Screen {
         for (MacroDef def : MacroDef.ALL) {
             if (!def.category.equals(currentCategory)) continue;
             boolean expanded = def.id.equals(expandedMacro);
-            int fieldCount = 2 + def.slotNames.size();
+            int fieldCount = 3 + def.slotNames.size(); // hotkey + delay + mode + slots
             int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
             total += cardH + CARD_GAP;
         }
@@ -438,7 +443,7 @@ public class MacroScreen extends Screen {
             if (entry == null) continue;
 
             boolean expanded = def.id.equals(expandedMacro);
-            int fieldCount = 2 + def.slotNames.size();
+            int fieldCount = 3 + def.slotNames.size(); // hotkey + delay + mode + slots
             int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
 
             // Only process if visible in scroll area
@@ -492,6 +497,14 @@ public class MacroScreen extends Screen {
                         editingDelay = true;
                         editingDelayId = def.id;
                         delayBuffer = String.valueOf(entry.delay);
+                        return true;
+                    }
+                    fy += FIELD_H + 3;
+
+                    // Mode field (click to cycle)
+                    if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
+                        entry.mode = (entry.mode + 1) % 3;
+                        cfg.save();
                         return true;
                     }
                     fy += FIELD_H + 3;

@@ -164,9 +164,8 @@ public class MacroRunner {
     }
 
     // ── DA — Double Anchor ─────────────────────────────────────────────
-    // Sequence: anchor→rclick (place) → glowstone→rclick (charge) →
-    //           anchor→rclick (explode 1st + airplace 2nd) →
-    //           glowstone→rclick (charge 2nd) → explodeSlot→rclick (detonate 2nd)
+    // Sequence: anchor→glowstone→explode(detonate 1st) →
+    //           anchor(place 2nd at explosion spot)→glowstone→explode(detonate 2nd)
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int d = Math.max(MIN_STEP_MS, e.delay);
         int anchor = getSlot(e, "anchorSlot");
@@ -174,23 +173,19 @@ public class MacroRunner {
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. Place first anchor
+        // === First anchor: place → charge → detonate ===
         switchSlotAndRightClick(anchor);
         sleep(d); if (!check()) return;
-
-        // 2. Charge first anchor with glowstone
         switchSlotAndRightClick(glowstone);
         sleep(d); if (!check()) return;
+        switchSlotAndRightClick(det);
+        sleep(d); if (!check()) return;
 
-        // 3. Switch to anchor → explodes 1st + immediately airplaces 2nd
+        // === Second anchor: place at explosion spot → charge → detonate ===
         switchSlotAndRightClick(anchor);
         sleep(d); if (!check()) return;
-
-        // 4. Charge second anchor with glowstone
         switchSlotAndRightClick(glowstone);
         sleep(d); if (!check()) return;
-
-        // 5. Detonate second anchor with explode slot
         switchSlotAndRightClick(det);
     }
 

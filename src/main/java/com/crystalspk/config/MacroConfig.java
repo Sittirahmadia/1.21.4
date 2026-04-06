@@ -14,10 +14,17 @@ public class MacroConfig {
     // Per-macro settings
     public Map<String, MacroEntry> macros = new LinkedHashMap<>();
 
+    // Mode: 0=single click, 1=hold, 2=loop
+    public static final int MODE_SINGLE = 0;
+    public static final int MODE_HOLD = 1;
+    public static final int MODE_LOOP = 2;
+    public static final String[] MODE_NAMES = {"Single", "Hold", "Loop"};
+
     public static class MacroEntry {
         public boolean active = false;
         public int keybind = -1; // GLFW key code, -1 = None
         public int delay = 30;
+        public int mode = MODE_SINGLE; // 0=single, 1=hold, 2=loop
         public Map<String, Integer> slots = new LinkedHashMap<>(); // slotName → hotbar slot (0-8) or -1
 
         public MacroEntry() {}
@@ -58,6 +65,7 @@ public class MacroConfig {
                         if (jm.has("active")) entry.active = jm.get("active").getAsBoolean();
                         if (jm.has("keybind")) entry.keybind = jm.get("keybind").getAsInt();
                         if (jm.has("delay")) entry.delay = jm.get("delay").getAsInt();
+                        if (jm.has("mode")) entry.mode = Math.max(0, Math.min(2, jm.get("mode").getAsInt()));
                         if (jm.has("slots")) {
                             JsonObject jSlots = jm.getAsJsonObject("slots");
                             for (Map.Entry<String, JsonElement> se : jSlots.entrySet()) {
@@ -84,6 +92,7 @@ public class MacroConfig {
             jm.addProperty("active", entry.active);
             jm.addProperty("keybind", entry.keybind);
             jm.addProperty("delay", entry.delay);
+            jm.addProperty("mode", entry.mode);
             JsonObject jSlots = new JsonObject();
             for (Map.Entry<String, Integer> se : entry.slots.entrySet()) {
                 jSlots.addProperty(se.getKey(), se.getValue());
