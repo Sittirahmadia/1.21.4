@@ -142,9 +142,8 @@ public class MacroRunner {
         }
     }
 
-    // ── SA — Single Anchor (matches sa.ahk) ─────────────────────────────
-    // Uses atomic switchSlotAndRightClick to guarantee slot is set before click.
-    // Sequence: anchor+rclick → glowstone+rclick → rclick(charge) → det+rclick
+    // ── SA — Single Anchor ───────────────────────────────────────────────
+    // Sequence: anchor+rclick → glowstone+rclick (1 charge) → detonate+rclick
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int d = Math.max(MIN_STEP_MS, e.delay);
         int anchor = getSlot(e, "anchorSlot");
@@ -152,24 +151,20 @@ public class MacroRunner {
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. Switch to anchor + place (atomic)
+        // 1. Place anchor
         switchSlotAndRightClick(anchor);
         sleep(d); if (!check()) return;
 
-        // 2. Switch to glowstone + charge (atomic)
+        // 2. Charge with glowstone (single charge)
         switchSlotAndRightClick(glowstone);
         sleep(d); if (!check()) return;
 
-        // 3. Extra right-click to confirm charge
-        rightClick();
-        sleep(d); if (!check()) return;
-
-        // 4. Switch to detonate slot + detonate (atomic)
+        // 3. Detonate
         switchSlotAndRightClick(det);
     }
 
-    // ── DA — Double Anchor (matches da.ahk) ─────────────────────────────
-    // Two identical SA cycles. Second cycle starts immediately after first detonation.
+    // ── DA — Double Anchor ───────────────────────────────────────────────
+    // Two SA cycles back-to-back. Each: anchor+rclick → glowstone+rclick → det+rclick
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int d = Math.max(MIN_STEP_MS, e.delay);
         int anchor = getSlot(e, "anchorSlot");
@@ -178,24 +173,20 @@ public class MacroRunner {
         int det = explode >= 0 ? explode : anchor;
 
         for (int i = 0; i < 2; i++) {
-            // anchor + place
+            // 1. Place anchor
             switchSlotAndRightClick(anchor);
             sleep(d); if (!check()) return;
 
-            // glowstone + charge
+            // 2. Charge with glowstone (single charge)
             switchSlotAndRightClick(glowstone);
             sleep(d); if (!check()) return;
 
-            // extra charge click
-            rightClick();
-            sleep(d); if (!check()) return;
-
-            // detonate
+            // 3. Detonate
             switchSlotAndRightClick(det);
 
-            // Minimal gap before second cycle — just enough for MC to register detonation
+            // Gap before second cycle
             if (i == 0) {
-                sleep(MIN_STEP_MS); if (!check()) return;
+                sleep(d); if (!check()) return;
             }
         }
     }
@@ -210,12 +201,10 @@ public class MacroRunner {
         int pearl = getSlot(e, "pearlSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // SA cycle (atomic slot+click)
+        // SA cycle (1 charge)
         switchSlotAndRightClick(anchor);
         sleep(d); if (!check()) return;
         switchSlotAndRightClick(glowstone);
-        sleep(d); if (!check()) return;
-        rightClick();
         sleep(d); if (!check()) return;
         switchSlotAndRightClick(det);
         sleep(d); if (!check()) return;
