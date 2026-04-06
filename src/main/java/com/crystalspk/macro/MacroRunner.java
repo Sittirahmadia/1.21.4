@@ -163,58 +163,35 @@ public class MacroRunner {
         switchSlotAndRightClick(det);
     }
 
-    // ── DA — Double Anchor (Airplace) ──────────────────────────────────
-    // Hold use key the ENTIRE time, only switch slots.
-    // While use key is held, switching slots = instant use-item on new slot.
-    //   1. Hold use → switch to anchor   → places anchor
-    //   2.          → switch to glowstone → charges anchor
-    //   3.          → switch to anchor    → DETONATES + AIRPLACES new anchor
-    //   4.          → switch to glowstone → charges new anchor
-    //   5.          → switch to totem     → detonates 2nd anchor (totem = survive)
-    //   6. Release use
+    // ── DA — Double Anchor ─────────────────────────────────────────────
+    // Sequence: anchor→rclick (place) → glowstone→rclick (charge) →
+    //           anchor→rclick (explode 1st + airplace 2nd) →
+    //           glowstone→rclick (charge 2nd) → explodeSlot→rclick (detonate 2nd)
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int d = Math.max(MIN_STEP_MS, e.delay);
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
-        int totem = getSlot(e, "totemSlot");
-        int finalDet = totem >= 0 ? totem : anchor;
+        int explode = getSlot(e, "explodeSlot");
+        int det = explode >= 0 ? explode : anchor;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
+        // 1. Place first anchor
+        switchSlotAndRightClick(anchor);
+        sleep(d); if (!check()) return;
 
-        // Hold use key (right-click held)
-        mc.execute(() -> {
-            ((KeyBindingAccessor) mc.options.useKey).setPressed(true);
-        });
-        sleep(MIN_STEP_MS); if (!check()) { releaseUse(mc); return; }
+        // 2. Charge first anchor with glowstone
+        switchSlotAndRightClick(glowstone);
+        sleep(d); if (!check()) return;
 
-        // Step 1: Switch to anchor → places anchor
-        switchSlot(anchor);
-        sleep(d); if (!check()) { releaseUse(mc); return; }
+        // 3. Switch to anchor → explodes 1st + immediately airplaces 2nd
+        switchSlotAndRightClick(anchor);
+        sleep(d); if (!check()) return;
 
-        // Step 2: Switch to glowstone → charges the anchor
-        switchSlot(glowstone);
-        sleep(d); if (!check()) { releaseUse(mc); return; }
+        // 4. Charge second anchor with glowstone
+        switchSlotAndRightClick(glowstone);
+        sleep(d); if (!check()) return;
 
-        // Step 3: Switch to anchor → DETONATES + AIRPLACES new anchor
-        switchSlot(anchor);
-        sleep(d); if (!check()) { releaseUse(mc); return; }
-
-        // Step 4: Switch to glowstone → charges new anchor
-        switchSlot(glowstone);
-        sleep(d); if (!check()) { releaseUse(mc); return; }
-
-        // Step 5: Switch to totem → detonates 2nd anchor (totem in hand)
-        switchSlot(finalDet);
-        sleep(d);
-
-        // Release use key
-        releaseUse(mc);
-    }
-
-    private static void releaseUse(MinecraftClient mc) {
-        mc.execute(() -> {
-            ((KeyBindingAccessor) mc.options.useKey).setPressed(false);
-        });
+        // 5. Detonate second anchor with explode slot
+        switchSlotAndRightClick(det);
     }
 
     // ── AP — Anchor Pearl (matches ap.ahk) ──────────────────────────────

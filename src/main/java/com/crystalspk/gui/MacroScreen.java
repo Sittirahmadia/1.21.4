@@ -11,21 +11,25 @@ import org.lwjgl.glfw.GLFW;
 import java.util.*;
 
 /**
- * Full-featured macro configuration GUI with visual effects.
- * Supports keyboard + mouse button keybinds, manual delay input, slot cycling.
+ * Compact, scrollable macro configuration GUI.
+ * Top tab bar for categories, scrollable card list, smaller footprint.
  */
 public class MacroScreen extends Screen {
 
     // ── Layout ──────────────────────────────────────────────────────────
-    private static final int SIDEBAR_W = 130;
-    private static final int CARD_H = 34;
-    private static final int FIELD_H = 22;
-    private static final int FIELD_W = 100;
+    private static final int TAB_H      = 24;
+    private static final int CARD_H     = 26;
+    private static final int FIELD_H    = 18;
+    private static final int FIELD_W    = 80;
+    private static final int PAD        = 6;
+    private static final int CARD_GAP   = 4;
 
     // ── Theme Colors ────────────────────────────────────────────────────
-    private static final int BG         = 0xFF080A10;
-    private static final int BG_GRAD    = 0xFF0C1018;
-    private static final int SIDEBAR_BG = 0xFF0D1120;
+    private static final int BG         = 0xFF0A0D14;
+    private static final int PANEL_BG   = 0xFF0E1320;
+    private static final int TAB_BG     = 0xFF0D1120;
+    private static final int TAB_ACT    = 0xFF142050;
+    private static final int TAB_HOV    = 0xFF111830;
     private static final int CARD_BG    = 0xFF101828;
     private static final int CARD_ON    = 0xFF121E34;
     private static final int CARD_HOV   = 0xFF141F30;
@@ -35,21 +39,22 @@ public class MacroScreen extends Screen {
     private static final int BORDER_ON  = 0xFF1E3860;
     private static final int ACCENT     = 0xFF4FC8FF;
     private static final int ACCENT_DIM = 0xFF2A6890;
-    private static final int ACCENT_GL  = 0x304FC8FF;
-    private static final int RED        = 0xFFF05E7A;
     private static final int GREEN      = 0xFF50E88A;
-    private static final int YELLOW     = 0xFFF0C040;
     private static final int TEXT_W     = 0xFFE8EEFF;
     private static final int TEXT_G     = 0xFF7A88B0;
     private static final int TEXT_D     = 0xFF414D6A;
     private static final int TEXT_DD    = 0xFF252E45;
     private static final int WHITE      = 0xFFFFFFFF;
     private static final int TOGGLE_OFF = 0xFF2A3048;
+    private static final int SCROLL_BG  = 0xFF151D2C;
+    private static final int SCROLL_FG  = 0xFF2A3858;
+    private static final int SCROLL_HOV = 0xFF3A4C70;
 
     // ── State ───────────────────────────────────────────────────────────
     private String currentCategory = "crystal";
     private String expandedMacro = null;
-    private int scrollY = 0;
+    private double scrollY = 0;
+    private int maxScroll = 0;
 
     // Keybind capture
     private boolean capturing = false;
@@ -64,12 +69,21 @@ public class MacroScreen extends Screen {
     private long openTime;
     private float pulsePhase = 0;
 
+    // Scroll drag
+    private boolean draggingScroll = false;
+    private int dragStartY = 0;
+    private double dragStartScroll = 0;
+
+    // Panel geometry (computed in render)
+    private int panelX, panelY, panelW, panelH;
+    private int contentTop, contentH;
+
     private static final String[] CATEGORIES = {"crystal", "sword", "mace", "cart", "uhc"};
     private static final String[] CAT_LABELS = {"Crystal", "Sword", "Mace", "Cart", "UHC"};
-    private static final String[] CAT_ICONS  = {"◆", "⚔", "⚒", "⛏", "♥"};
+    private static final String[] CAT_ICONS  = {"\u25C6", "\u2694", "\u2692", "\u26CF", "\u2665"};
 
     public MacroScreen() {
-        super(Text.literal("CrystalSpK Macro"));
+        super(Text.literal("CrystalSpK"));
     }
 
     @Override
@@ -85,74 +99,89 @@ public class MacroScreen extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         pulsePhase += delta * 0.08f;
-        float fadeIn = Math.min(1f, (System.currentTimeMillis() - openTime) / 200f);
-        int fadeAlpha = (int)(fadeIn * 255) << 24;
 
-        // Background gradient
+        // Full screen dark bg
         ctx.fill(0, 0, width, height, BG);
-        // Radial glow top-left
-        drawRadialGlow(ctx, 0, 0, 200, ACCENT_GL);
-        // Radial glow bottom-right
-        drawRadialGlow(ctx, width - 150, height - 150, 180, 0x20783CFF);
 
-        // ── Sidebar ─────────────────────────────────────────────────────
-        ctx.fill(0, 0, SIDEBAR_W, height, SIDEBAR_BG);
-        ctx.fill(SIDEBAR_W, 0, SIDEBAR_W + 1, height, BORDER);
+        // Center panel — compact size
+        panelW = Math.min(320, width - 20);
+        panelH = Math.min(height - 20, 340);
+        panelX = (width - panelW) / 2;
+        panelY = (height - panelH) / 2;
 
-        // Logo area
-        int logoY = 12;
-        // Glow behind logo text
-        drawHGlow(ctx, 10, logoY - 2, SIDEBAR_W - 20, 22, ACCENT_GL);
-        ctx.drawTextWithShadow(textRenderer, "◆ CrystalSpK", 14, logoY + 3, ACCENT);
-        ctx.drawTextWithShadow(textRenderer, "   Macro v1.0", 14, logoY + 16, TEXT_DD);
+        // Panel background with border
+        ctx.fill(panelX, panelY, panelX + panelW, panelY + panelH, PANEL_BG);
+        drawBorder(ctx, panelX, panelY, panelW, panelH, BORDER);
 
-        // Category nav
-        int catY = 52;
-        for (int i = 0; i < CATEGORIES.length; i++) {
-            boolean active = CATEGORIES[i].equals(currentCategory);
-            boolean hov = mouseX >= 6 && mouseX < SIDEBAR_W - 6 && mouseY >= catY && mouseY < catY + 28;
+        // ── Title bar ───────────────────────────────────────────────────
+        int titleH = 16;
+        ctx.fill(panelX, panelY, panelX + panelW, panelY + titleH, TAB_BG);
+        ctx.fill(panelX, panelY + titleH, panelX + panelW, panelY + titleH + 1, BORDER);
+        ctx.drawTextWithShadow(textRenderer, "\u25C6 CrystalSpK", panelX + 5, panelY + 4, ACCENT);
 
-            if (active) {
-                // Active: gradient fill + accent left bar
-                ctx.fill(6, catY, SIDEBAR_W - 6, catY + 28, 0xFF142050);
-                drawHGlow(ctx, 6, catY, SIDEBAR_W - 12, 28, 0x204FC8FF);
-                ctx.fill(6, catY + 5, 9, catY + 23, ACCENT);
-            } else if (hov) {
-                ctx.fill(6, catY, SIDEBAR_W - 6, catY + 28, 0xFF111830);
-            }
-
-            int col = active ? TEXT_W : (hov ? TEXT_G : TEXT_D);
-            ctx.drawTextWithShadow(textRenderer, CAT_ICONS[i] + " " + CAT_LABELS[i], 16, catY + 10, col);
-
-            // Macro count badge
-            int count = countActiveMacros(CATEGORIES[i]);
-            if (count > 0) {
-                String badge = String.valueOf(count);
-                int bx = SIDEBAR_W - 24;
-                ctx.fill(bx, catY + 8, bx + 14, catY + 20, active ? 0xFF1A3060 : 0xFF1A2040);
-                ctx.drawTextWithShadow(textRenderer, badge, bx + 4, catY + 10, ACCENT);
-            }
-            catY += 32;
+        // Active macro count
+        int totalActive = countAllActive();
+        if (totalActive > 0) {
+            String badge = totalActive + " active";
+            int bw = textRenderer.getWidth(badge);
+            ctx.drawTextWithShadow(textRenderer, badge, panelX + panelW - bw - 6, panelY + 4, GREEN);
         }
 
-        // Sidebar footer
-        ctx.fill(8, height - 28, SIDEBAR_W - 8, height - 27, BORDER);
-        ctx.drawTextWithShadow(textRenderer, "R-Shift: GUI", 14, height - 20, TEXT_DD);
+        // ── Tab bar ─────────────────────────────────────────────────────
+        int tabY = panelY + titleH + 1;
+        int tabW = panelW / CATEGORIES.length;
 
-        // ── Main Content ────────────────────────────────────────────────
-        int cx = SIDEBAR_W + 16;
-        int cy = 12;
-        int cw = width - SIDEBAR_W - 32;
+        for (int i = 0; i < CATEGORIES.length; i++) {
+            int tx = panelX + i * tabW;
+            int tw = (i == CATEGORIES.length - 1) ? panelX + panelW - tx : tabW;
+            boolean active = CATEGORIES[i].equals(currentCategory);
+            boolean hov = mouseX >= tx && mouseX < tx + tw && mouseY >= tabY && mouseY < tabY + TAB_H;
 
-        // Page title with glow
-        String title = getPageTitle();
-        drawHGlow(ctx, cx - 4, cy - 2, cw, 22, 0x104FC8FF);
-        ctx.drawTextWithShadow(textRenderer, title, cx, cy + 2, TEXT_W);
-        ctx.drawTextWithShadow(textRenderer, getPageSub(), cx + textRenderer.getWidth(title) + 12, cy + 2, TEXT_D);
-        cy += 24;
+            if (active) {
+                ctx.fill(tx, tabY, tx + tw, tabY + TAB_H, TAB_ACT);
+                // Bottom accent line
+                ctx.fill(tx + 4, tabY + TAB_H - 2, tx + tw - 4, tabY + TAB_H, ACCENT);
+            } else if (hov) {
+                ctx.fill(tx, tabY, tx + tw, tabY + TAB_H, TAB_HOV);
+            }
 
-        // Macro cards
+            int count = countActiveMacros(CATEGORIES[i]);
+            String label = CAT_ICONS[i] + " " + CAT_LABELS[i];
+            int lw = textRenderer.getWidth(label);
+            int col = active ? TEXT_W : (hov ? TEXT_G : TEXT_D);
+            ctx.drawTextWithShadow(textRenderer, label, tx + (tw - lw) / 2, tabY + 8, col);
+
+            // Badge
+            if (count > 0) {
+                String cb = String.valueOf(count);
+                int cbw = textRenderer.getWidth(cb);
+                ctx.fill(tx + tw - cbw - 7, tabY + 3, tx + tw - 3, tabY + 13, active ? ACCENT_DIM : 0xFF1A2040);
+                ctx.drawTextWithShadow(textRenderer, cb, tx + tw - cbw - 5, tabY + 4, ACCENT);
+            }
+
+            // Separator
+            if (i < CATEGORIES.length - 1) {
+                ctx.fill(tx + tw, tabY + 4, tx + tw + 1, tabY + TAB_H - 4, BORDER);
+            }
+        }
+
+        // ── Content area (scrollable) ───────────────────────────────────
+        contentTop = tabY + TAB_H + 1;
+        contentH = panelY + panelH - contentTop;
+        ctx.fill(panelX, contentTop, panelX + panelW, contentTop + 1, BORDER);
+
+        // Enable scissor for scroll clipping
+        ctx.enableScissor(panelX, contentTop, panelX + panelW, contentTop + contentH);
+
+        // Calculate total content height
+        int totalContentH = calcContentHeight();
+        maxScroll = Math.max(0, totalContentH - contentH + PAD);
+        scrollY = Math.max(0, Math.min(scrollY, maxScroll));
+
+        // Draw macro cards
         MacroConfig cfg = MacroConfig.get();
+        int cy = contentTop + PAD - (int) scrollY;
+
         for (MacroDef def : MacroDef.ALL) {
             if (!def.category.equals(currentCategory)) continue;
             MacroConfig.MacroEntry entry = cfg.macros.get(def.id);
@@ -160,108 +189,128 @@ public class MacroScreen extends Screen {
 
             boolean expanded = def.id.equals(expandedMacro);
             boolean isActive = entry.active;
-            int fieldCount = 2 + def.slotNames.size(); // keybind + delay + slots
-            int cardH = expanded ? CARD_H + 6 + fieldCount * (FIELD_H + 5) + 6 : CARD_H;
+            int fieldCount = 2 + def.slotNames.size();
+            int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
 
-            // Card bg + border
-            int bg = isActive ? CARD_ON : CARD_BG;
-            boolean cardHov = mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + CARD_H;
-            if (cardHov && !expanded) bg = CARD_HOV;
-
-            ctx.fill(cx, cy, cx + cw, cy + cardH, bg);
-            drawBorder(ctx, cx, cy, cw, cardH, isActive ? BORDER_ON : BORDER);
-
-            // Active glow top line
-            if (isActive) {
-                int glowW = Math.min(cw / 2, 180);
-                int pulse = (int)(Math.sin(pulsePhase) * 20 + 60);
-                for (int i = 0; i < glowW; i++) {
-                    int a = Math.max(0, pulse - i * pulse / glowW);
-                    ctx.fill(cx + 8 + i, cy + 1, cx + 9 + i, cy + 2, (a << 24) | 0x4FC8FF);
-                }
+            // Skip cards fully outside view
+            if (cy + cardH >= contentTop && cy <= contentTop + contentH) {
+                renderCard(ctx, def, entry, expanded, isActive, cx(PAD), cy, panelW - PAD * 2 - 6, cardH, mouseX, mouseY);
             }
 
-            // Badge (macro ID)
-            String badge = def.id.toUpperCase();
-            int badgeBg = isActive ? 0xFF142A50 : 0xFF1A2038;
-            ctx.fill(cx + 8, cy + 8, cx + 40, cy + 26, badgeBg);
-            drawBorder(ctx, cx + 8, cy + 8, 32, 18, isActive ? ACCENT_DIM : BORDER);
-            ctx.drawTextWithShadow(textRenderer, badge, cx + 13, cy + 12, isActive ? ACCENT : TEXT_G);
+            cy += cardH + CARD_GAP;
+        }
 
-            // Name
-            ctx.drawTextWithShadow(textRenderer, def.name, cx + 48, cy + 8, TEXT_W);
+        ctx.disableScissor();
 
-            // Keybind display (clickable)
-            String kbName = MacroEngine.getBindName(entry.keybind);
-            boolean kbCapturing = capturing && def.id.equals(captureId);
-            String kbText = kbCapturing ? "[ ... ]" : "[" + kbName + "]";
-            int kbX = cx + 48;
-            int kbY = cy + 20;
-            int kbW = textRenderer.getWidth(kbText);
-            boolean kbHov = !expanded && mouseX >= kbX && mouseX < kbX + kbW && mouseY >= kbY && mouseY < kbY + 10;
-            ctx.drawTextWithShadow(textRenderer, kbText, kbX, kbY, kbCapturing ? ACCENT : (kbHov ? ACCENT : TEXT_DD));
-            if (kbHov) ctx.fill(kbX, kbY + 10, kbX + kbW, kbY + 11, ACCENT_DIM);
+        // ── Scrollbar ───────────────────────────────────────────────────
+        if (maxScroll > 0) {
+            int sbX = panelX + panelW - 5;
+            int sbH = contentH;
+            ctx.fill(sbX, contentTop, sbX + 4, contentTop + sbH, SCROLL_BG);
 
-            // Toggle switch
-            int togX = cx + cw - 40;
-            int togY = cy + 10;
-            drawToggle(ctx, togX, togY, isActive, mouseX, mouseY);
+            double thumbRatio = (double) contentH / (totalContentH + PAD);
+            int thumbH = Math.max(12, (int)(sbH * thumbRatio));
+            int thumbY = contentTop + (int)((sbH - thumbH) * (scrollY / Math.max(1, maxScroll)));
 
-            // ── Expanded Body ───────────────────────────────────────────
-            if (expanded) {
-                int fy = cy + CARD_H + 4;
-                ctx.fill(cx + 10, fy - 2, cx + cw - 10, fy - 1, BORDER);
-
-                // Keybind field
-                fy = drawKeyField(ctx, cx, fy, cw, "Keybind",
-                        kbCapturing ? "Press key/mouse..." : kbName,
-                        mouseX, mouseY, kbCapturing);
-                fy += FIELD_H + 5;
-
-                // Delay field (editable text)
-                boolean delEditing = editingDelay && def.id.equals(editingDelayId);
-                String delVal = delEditing ? delayBuffer + "_" : String.valueOf(entry.delay);
-                fy = drawEditableField(ctx, cx, fy, cw, "Delay (ms)", delVal,
-                        mouseX, mouseY, delEditing);
-                fy += FIELD_H + 5;
-
-                // Slot fields
-                for (String slot : def.slotNames) {
-                    String label = formatSlotLabel(slot);
-                    int slotVal = entry.slots.getOrDefault(slot, -1);
-                    String valStr = slotVal >= 0 ? "Slot " + (slotVal + 1) : "None";
-                    fy = drawSlotField(ctx, cx, fy, cw, label, valStr, mouseX, mouseY);
-                    fy += FIELD_H + 5;
-                }
-            }
-
-            cy += cardH + 6;
+            boolean sbHov = mouseX >= sbX && mouseX < sbX + 4 && mouseY >= thumbY && mouseY < thumbY + thumbH;
+            ctx.fill(sbX, thumbY, sbX + 4, thumbY + thumbH, (sbHov || draggingScroll) ? SCROLL_HOV : SCROLL_FG);
         }
 
         // ── Capture Overlay ─────────────────────────────────────────────
         if (capturing) {
             ctx.fill(0, 0, width, height, 0xDD050810);
-
-            int ow = 300, oh = 120;
+            int ow = 240, oh = 80;
             int ox = (width - ow) / 2, oy = (height - oh) / 2;
-
-            // Outer glow
-            drawRadialGlow(ctx, ox - 20, oy - 20, ow + 40, 0x304FC8FF);
-
             ctx.fill(ox, oy, ox + ow, oy + oh, 0xFF0E1424);
             drawBorder(ctx, ox, oy, ow, oh, ACCENT);
-            // Top accent line
-            ctx.fill(ox + 20, oy + 1, ox + ow - 20, oy + 3, ACCENT_DIM);
-
-            ctx.drawCenteredTextWithShadow(textRenderer, "Press any key or mouse button", width / 2, oy + 22, TEXT_W);
-            ctx.drawCenteredTextWithShadow(textRenderer, "Binding: " + captureId.toUpperCase(), width / 2, oy + 50, ACCENT);
-            ctx.drawCenteredTextWithShadow(textRenderer, "ESC = cancel  |  DEL = unbind", width / 2, oy + 80, TEXT_DD);
+            ctx.fill(ox + 16, oy + 1, ox + ow - 16, oy + 2, ACCENT_DIM);
+            ctx.drawCenteredTextWithShadow(textRenderer, "Press key / mouse button", width / 2, oy + 14, TEXT_W);
+            ctx.drawCenteredTextWithShadow(textRenderer, "Binding: " + captureId.toUpperCase(), width / 2, oy + 34, ACCENT);
+            ctx.drawCenteredTextWithShadow(textRenderer, "ESC=cancel  DEL=unbind", width / 2, oy + 56, TEXT_DD);
         }
 
         super.render(ctx, mouseX, mouseY, delta);
     }
 
+    // ── Card Rendering ──────────────────────────────────────────────────
+
+    private void renderCard(DrawContext ctx, MacroDef def, MacroConfig.MacroEntry entry,
+                            boolean expanded, boolean isActive, int x, int y, int w, int h,
+                            int mouseX, int mouseY) {
+
+        boolean headerHov = mouseX >= x && mouseX < x + w && mouseY >= y && mouseY < y + CARD_H;
+        int bg = isActive ? CARD_ON : (headerHov && !expanded ? CARD_HOV : CARD_BG);
+        ctx.fill(x, y, x + w, y + h, bg);
+        drawBorder(ctx, x, y, w, h, isActive ? BORDER_ON : BORDER);
+
+        // Active pulse top line
+        if (isActive) {
+            int pw = Math.min(w / 3, 80);
+            int pulse = (int)(Math.sin(pulsePhase) * 15 + 40);
+            for (int i = 0; i < pw; i++) {
+                int a = Math.max(0, pulse - i * pulse / pw);
+                ctx.fill(x + 4 + i, y + 1, x + 5 + i, y + 2, (a << 24) | 0x4FC8FF);
+            }
+        }
+
+        // Badge
+        String badge = def.id.toUpperCase();
+        int badgeBg = isActive ? 0xFF142A50 : 0xFF1A2038;
+        int badgeW = textRenderer.getWidth(badge) + 6;
+        ctx.fill(x + 4, y + 5, x + 4 + badgeW, y + CARD_H - 5, badgeBg);
+        ctx.drawTextWithShadow(textRenderer, badge, x + 7, y + 9, isActive ? ACCENT : TEXT_G);
+
+        // Name
+        ctx.drawTextWithShadow(textRenderer, def.name, x + 8 + badgeW, y + 5, TEXT_W);
+
+        // Inline keybind (collapsed only)
+        if (!expanded) {
+            String kbName = MacroEngine.getBindName(entry.keybind);
+            boolean kbCapturing = capturing && def.id.equals(captureId);
+            String kbText = kbCapturing ? "[...]" : "[" + kbName + "]";
+            int kbX = x + 8 + badgeW;
+            int kbY = y + 16;
+            int kbW = textRenderer.getWidth(kbText);
+            boolean kbHov = mouseX >= kbX && mouseX < kbX + kbW && mouseY >= kbY && mouseY < kbY + 9;
+            ctx.drawTextWithShadow(textRenderer, kbText, kbX, kbY, kbCapturing ? ACCENT : (kbHov ? ACCENT : TEXT_DD));
+        }
+
+        // Toggle
+        int togX = x + w - 28;
+        int togY = y + 6;
+        drawToggle(ctx, togX, togY, isActive, mouseX, mouseY);
+
+        // ── Expanded Fields ─────────────────────────────────────────────
+        if (expanded) {
+            int fy = y + CARD_H + 1;
+            ctx.fill(x + 6, fy - 1, x + w - 6, fy, BORDER);
+
+            // Keybind
+            boolean kbCapturing = capturing && def.id.equals(captureId);
+            String kbVal = kbCapturing ? "Press key..." : MacroEngine.getBindName(entry.keybind);
+            fy = drawFieldRow(ctx, x, fy, w, "Keybind", kbVal, mouseX, mouseY, kbCapturing);
+            fy += FIELD_H + 3;
+
+            // Delay
+            boolean delEditing = editingDelay && def.id.equals(editingDelayId);
+            String delVal = delEditing ? delayBuffer + "_" : entry.delay + "ms";
+            fy = drawFieldRow(ctx, x, fy, w, "Delay", delVal, mouseX, mouseY, delEditing);
+            fy += FIELD_H + 3;
+
+            // Slots
+            for (String slot : def.slotNames) {
+                String label = formatSlotLabel(slot);
+                int slotVal = entry.slots.getOrDefault(slot, -1);
+                String valStr = slotVal >= 0 ? "Slot " + (slotVal + 1) : "None";
+                fy = drawFieldRow(ctx, x, fy, w, label, valStr, mouseX, mouseY, false);
+                fy += FIELD_H + 3;
+            }
+        }
+    }
+
     // ── Drawing Helpers ─────────────────────────────────────────────────
+
+    private int cx(int offset) { return panelX + offset; }
 
     private void drawBorder(DrawContext ctx, int x, int y, int w, int h, int color) {
         ctx.fill(x, y, x + w, y + 1, color);
@@ -270,99 +319,71 @@ public class MacroScreen extends Screen {
         ctx.fill(x + w - 1, y, x + w, y + h, color);
     }
 
-    private void drawHGlow(DrawContext ctx, int x, int y, int w, int h, int color) {
-        // Horizontal gradient glow (fades to transparent at edges)
-        int a = (color >>> 24) & 0xFF;
-        int rgb = color & 0x00FFFFFF;
-        for (int i = 0; i < w; i++) {
-            float t = 1f - Math.abs(i - w / 2f) / (w / 2f);
-            int alpha = (int)(a * t * t);
-            if (alpha > 0) {
-                ctx.fill(x + i, y, x + i + 1, y + h, (alpha << 24) | rgb);
-            }
-        }
-    }
-
-    private void drawRadialGlow(DrawContext ctx, int x, int y, int size, int color) {
-        int a = (color >>> 24) & 0xFF;
-        int rgb = color & 0x00FFFFFF;
-        int steps = Math.min(size / 4, 20);
-        for (int i = 0; i < steps; i++) {
-            float t = 1f - (float) i / steps;
-            int alpha = (int)(a * t * t);
-            if (alpha > 0) {
-                int shrink = i * size / (steps * 2);
-                ctx.fill(x + shrink, y + shrink, x + size - shrink, y + size - shrink,
-                        (alpha << 24) | rgb);
-            }
-        }
-    }
-
     private void drawToggle(DrawContext ctx, int x, int y, boolean on, int mx, int my) {
-        boolean hov = mx >= x && mx < x + 30 && my >= y && my < y + 16;
+        int tw = 24, th = 12;
+        boolean hov = mx >= x && mx < x + tw && my >= y && my < y + th;
         int bg = on ? ACCENT : TOGGLE_OFF;
         if (hov) bg = on ? 0xFF60D4FF : 0xFF343C58;
 
-        ctx.fill(x, y, x + 30, y + 16, bg);
-        drawBorder(ctx, x, y, 30, 16, on ? ACCENT_DIM : BORDER);
+        ctx.fill(x, y, x + tw, y + th, bg);
+        drawBorder(ctx, x, y, tw, th, on ? ACCENT_DIM : BORDER);
 
-        int dotX = on ? x + 17 : x + 3;
-        ctx.fill(dotX, y + 3, dotX + 10, y + 13, on ? WHITE : TEXT_D);
-
-        // Glow when on
-        if (on) {
-            ctx.fill(x - 1, y - 1, x + 31, y, 0x204FC8FF);
-            ctx.fill(x - 1, y + 16, x + 31, y + 17, 0x204FC8FF);
-        }
+        int dotX = on ? x + 14 : x + 2;
+        ctx.fill(dotX, y + 2, dotX + 8, y + 10, on ? WHITE : TEXT_D);
     }
 
-    private int drawKeyField(DrawContext ctx, int cx, int fy, int cw, String label, String value,
+    private int drawFieldRow(DrawContext ctx, int cx, int fy, int cw, String label, String value,
                               int mx, int my, boolean active) {
-        ctx.drawTextWithShadow(textRenderer, label, cx + 16, fy + 6, TEXT_G);
-        int fx = cx + cw - FIELD_W - 10;
+        int fx = cx + cw - FIELD_W - 8;
         boolean hov = mx >= fx && mx < fx + FIELD_W && my >= fy && my < fy + FIELD_H;
-        ctx.fill(fx, fy, fx + FIELD_W, fy + FIELD_H, hov ? FIELD_HOV : FIELD_BG);
-        drawBorder(ctx, fx, fy, FIELD_W, FIELD_H, active ? ACCENT : (hov ? ACCENT_DIM : BORDER));
-        ctx.drawTextWithShadow(textRenderer, value, fx + 6, fy + 6, active ? ACCENT : (hov ? ACCENT : TEXT_W));
-        return fy;
-    }
 
-    private int drawEditableField(DrawContext ctx, int cx, int fy, int cw, String label, String value,
-                                   int mx, int my, boolean active) {
-        ctx.drawTextWithShadow(textRenderer, label, cx + 16, fy + 6, TEXT_G);
-        int fx = cx + cw - FIELD_W - 10;
-        boolean hov = mx >= fx && mx < fx + FIELD_W && my >= fy && my < fy + FIELD_H;
+        ctx.drawTextWithShadow(textRenderer, label, cx + 10, fy + 5, TEXT_G);
+
         ctx.fill(fx, fy, fx + FIELD_W, fy + FIELD_H, active ? 0xFF1A2844 : (hov ? FIELD_HOV : FIELD_BG));
         drawBorder(ctx, fx, fy, FIELD_W, FIELD_H, active ? ACCENT : (hov ? ACCENT_DIM : BORDER));
-        ctx.drawTextWithShadow(textRenderer, value, fx + 6, fy + 6, active ? WHITE : (hov ? ACCENT : TEXT_W));
+        ctx.drawTextWithShadow(textRenderer, value, fx + 4, fy + 5, active ? WHITE : (hov ? ACCENT : TEXT_W));
         return fy;
     }
 
-    private int drawSlotField(DrawContext ctx, int cx, int fy, int cw, String label, String value,
-                               int mx, int my) {
-        ctx.drawTextWithShadow(textRenderer, label, cx + 16, fy + 6, TEXT_G);
-        int fx = cx + cw - FIELD_W - 10;
-        boolean hov = mx >= fx && mx < fx + FIELD_W && my >= fy && my < fy + FIELD_H;
-        ctx.fill(fx, fy, fx + FIELD_W, fy + FIELD_H, hov ? FIELD_HOV : FIELD_BG);
-        drawBorder(ctx, fx, fy, FIELD_W, FIELD_H, hov ? ACCENT_DIM : BORDER);
-        ctx.drawTextWithShadow(textRenderer, value, fx + 6, fy + 6, hov ? ACCENT : TEXT_W);
-        return fy;
+    // ── Content Height Calculation ──────────────────────────────────────
+
+    private int calcContentHeight() {
+        int total = 0;
+        for (MacroDef def : MacroDef.ALL) {
+            if (!def.category.equals(currentCategory)) continue;
+            boolean expanded = def.id.equals(expandedMacro);
+            int fieldCount = 2 + def.slotNames.size();
+            int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
+            total += cardH + CARD_GAP;
+        }
+        return total;
+    }
+
+    // ── Mouse Scroll ────────────────────────────────────────────────────
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double hAmount, double vAmount) {
+        if (capturing) return true;
+        if (mouseX >= panelX && mouseX < panelX + panelW &&
+            mouseY >= contentTop && mouseY < contentTop + contentH) {
+            scrollY -= vAmount * 18;
+            scrollY = Math.max(0, Math.min(scrollY, maxScroll));
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, hAmount, vAmount);
     }
 
     // ── Mouse Clicks ────────────────────────────────────────────────────
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        // Capture mode: any mouse button (except left which dismisses if outside)
+        // Capture mode
         if (capturing) {
             if (button == 0) {
-                // Left click = dismiss capture
                 capturing = false;
                 captureId = null;
                 return true;
             }
-            // Right(1), Middle(2), Side buttons(3,4) → bind as mouse button
-            // Store as -(button+1): right=-2, middle=-3, btn4=-4, btn5=-5
             MacroConfig cfg = MacroConfig.get();
             MacroConfig.MacroEntry entry = cfg.macros.get(captureId);
             if (entry != null) {
@@ -374,29 +395,42 @@ public class MacroScreen extends Screen {
             return true;
         }
 
-        // Finish delay editing on any click
-        if (editingDelay) {
-            finishDelayEdit();
-        }
+        if (editingDelay) finishDelayEdit();
 
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
-        // ── Category clicks ─────────────────────────────────────────────
-        int catY = 52;
+        // ── Tab clicks ──────────────────────────────────────────────────
+        int tabY = panelY + 17;
+        int tabW = panelW / CATEGORIES.length;
         for (int i = 0; i < CATEGORIES.length; i++) {
-            if (mouseX >= 6 && mouseX < SIDEBAR_W - 6 && mouseY >= catY && mouseY < catY + 28) {
-                currentCategory = CATEGORIES[i];
-                expandedMacro = null;
+            int tx = panelX + i * tabW;
+            int tw = (i == CATEGORIES.length - 1) ? panelX + panelW - tx : tabW;
+            if (mouseX >= tx && mouseX < tx + tw && mouseY >= tabY && mouseY < tabY + TAB_H) {
+                if (!CATEGORIES[i].equals(currentCategory)) {
+                    currentCategory = CATEGORIES[i];
+                    expandedMacro = null;
+                    scrollY = 0;
+                }
                 return true;
             }
-            catY += 32;
         }
 
-        // ── Macro card clicks ───────────────────────────────────────────
+        // ── Scrollbar drag ──────────────────────────────────────────────
+        if (maxScroll > 0) {
+            int sbX = panelX + panelW - 5;
+            if (mouseX >= sbX && mouseX < sbX + 6 && mouseY >= contentTop && mouseY < contentTop + contentH) {
+                draggingScroll = true;
+                dragStartY = (int) mouseY;
+                dragStartScroll = scrollY;
+                return true;
+            }
+        }
+
+        // ── Card clicks ─────────────────────────────────────────────────
         MacroConfig cfg = MacroConfig.get();
-        int cx = SIDEBAR_W + 16;
-        int cy = 12 + 24; // after title
-        int cw = width - SIDEBAR_W - 32;
+        int cx = panelX + PAD;
+        int cy = contentTop + PAD - (int) scrollY;
+        int cw = panelW - PAD * 2 - 6;
 
         for (MacroDef def : MacroDef.ALL) {
             if (!def.category.equals(currentCategory)) continue;
@@ -405,137 +439,141 @@ public class MacroScreen extends Screen {
 
             boolean expanded = def.id.equals(expandedMacro);
             int fieldCount = 2 + def.slotNames.size();
-            int cardH = expanded ? CARD_H + 6 + fieldCount * (FIELD_H + 5) + 6 : CARD_H;
+            int cardH = expanded ? CARD_H + 2 + fieldCount * (FIELD_H + 3) + 4 : CARD_H;
 
-            // Toggle
-            int togX = cx + cw - 40;
-            int togY = cy + 10;
-            if (mouseX >= togX && mouseX < togX + 30 && mouseY >= togY && mouseY < togY + 16) {
-                entry.active = !entry.active;
-                cfg.save();
-                return true;
-            }
+            // Only process if visible in scroll area
+            if (cy + cardH >= contentTop && cy <= contentTop + contentH) {
 
-            // Keybind click (collapsed card)
-            if (!expanded) {
-                String kbText = "[" + MacroEngine.getBindName(entry.keybind) + "]";
-                int kbW = textRenderer.getWidth(kbText);
-                if (mouseX >= cx + 48 && mouseX < cx + 48 + kbW
-                        && mouseY >= cy + 20 && mouseY < cy + 30) {
-                    capturing = true;
-                    captureId = def.id;
+                // Toggle
+                int togX = cx + cw - 28;
+                int togY = cy + 6;
+                if (mouseX >= togX && mouseX < togX + 24 && mouseY >= togY && mouseY < togY + 12) {
+                    entry.active = !entry.active;
+                    cfg.save();
                     return true;
                 }
-            }
 
-            // Header click → expand/collapse
-            if (mouseX >= cx && mouseX < cx + cw - 44 && mouseY >= cy && mouseY < cy + CARD_H) {
-                expandedMacro = expanded ? null : def.id;
-                return true;
-            }
-
-            // Expanded field clicks
-            if (expanded) {
-                int fy = cy + CARD_H + 4;
-                int fx = cx + cw - FIELD_W - 10;
-
-                // Keybind field
-                if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
-                    capturing = true;
-                    captureId = def.id;
-                    return true;
-                }
-                fy += FIELD_H + 5;
-
-                // Delay field → start editing
-                if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
-                    editingDelay = true;
-                    editingDelayId = def.id;
-                    delayBuffer = String.valueOf(entry.delay);
-                    return true;
-                }
-                fy += FIELD_H + 5;
-
-                // Slot fields → cycle
-                for (String slot : def.slotNames) {
-                    if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
-                        int val = entry.slots.getOrDefault(slot, -1);
-                        val = (val + 2) % 10 - 1; // -1,0,1,...,8
-                        entry.slots.put(slot, val);
-                        cfg.save();
+                // Keybind click (collapsed)
+                if (!expanded) {
+                    String badge = def.id.toUpperCase();
+                    int badgeW = textRenderer.getWidth(badge) + 6;
+                    String kbText = "[" + MacroEngine.getBindName(entry.keybind) + "]";
+                    int kbW = textRenderer.getWidth(kbText);
+                    int kbX = cx + 8 + badgeW;
+                    int kbY = cy + 16;
+                    if (mouseX >= kbX && mouseX < kbX + kbW && mouseY >= kbY && mouseY < kbY + 9) {
+                        capturing = true;
+                        captureId = def.id;
                         return true;
                     }
-                    fy += FIELD_H + 5;
+                }
+
+                // Header click → expand/collapse
+                if (mouseX >= cx && mouseX < cx + cw - 30 && mouseY >= cy && mouseY < cy + CARD_H) {
+                    expandedMacro = expanded ? null : def.id;
+                    return true;
+                }
+
+                // Expanded field clicks
+                if (expanded) {
+                    int fy = cy + CARD_H + 1;
+                    int fx = cx + cw - FIELD_W - 8;
+
+                    // Keybind field
+                    if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
+                        capturing = true;
+                        captureId = def.id;
+                        return true;
+                    }
+                    fy += FIELD_H + 3;
+
+                    // Delay field
+                    if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
+                        editingDelay = true;
+                        editingDelayId = def.id;
+                        delayBuffer = String.valueOf(entry.delay);
+                        return true;
+                    }
+                    fy += FIELD_H + 3;
+
+                    // Slot fields
+                    for (String slot : def.slotNames) {
+                        if (mouseX >= fx && mouseX < fx + FIELD_W && mouseY >= fy && mouseY < fy + FIELD_H) {
+                            int val = entry.slots.getOrDefault(slot, -1);
+                            val = (val + 2) % 10 - 1; // -1,0,1,...,8
+                            entry.slots.put(slot, val);
+                            cfg.save();
+                            return true;
+                        }
+                        fy += FIELD_H + 3;
+                    }
                 }
             }
 
-            cy += cardH + 6;
+            cy += cardH + CARD_GAP;
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        if (draggingScroll && maxScroll > 0) {
+            double ratio = (double) maxScroll / (contentH - 12);
+            scrollY = dragStartScroll + (mouseY - dragStartY) * ratio;
+            scrollY = Math.max(0, Math.min(scrollY, maxScroll));
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        draggingScroll = false;
+        return super.mouseReleased(mouseX, mouseY, button);
     }
 
     // ── Keyboard ────────────────────────────────────────────────────────
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // Capture mode
         if (capturing) {
             MacroConfig cfg = MacroConfig.get();
             MacroConfig.MacroEntry entry = cfg.macros.get(captureId);
-
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                capturing = false;
-                captureId = null;
-                return true;
+                capturing = false; captureId = null; return true;
             }
             if (keyCode == GLFW.GLFW_KEY_DELETE || keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-                // Unbind
                 if (entry != null) { entry.keybind = 0; cfg.save(); }
-                capturing = false;
-                captureId = null;
-                return true;
+                capturing = false; captureId = null; return true;
             }
-            // Set keyboard keybind
             if (entry != null) { entry.keybind = keyCode; cfg.save(); }
-            capturing = false;
-            captureId = null;
-            return true;
+            capturing = false; captureId = null; return true;
         }
 
-        // Delay editing mode
         if (editingDelay) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                editingDelay = false;
-                editingDelayId = null;
-                return true;
+                editingDelay = false; editingDelayId = null; return true;
             }
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
-                finishDelayEdit();
-                return true;
+                finishDelayEdit(); return true;
             }
             if (keyCode == GLFW.GLFW_KEY_BACKSPACE) {
-                if (!delayBuffer.isEmpty()) {
+                if (!delayBuffer.isEmpty())
                     delayBuffer = delayBuffer.substring(0, delayBuffer.length() - 1);
-                }
                 return true;
             }
-            return true; // consume all keys while editing
-        }
-
-        if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-            close();
             return true;
         }
+
+        if (keyCode == GLFW.GLFW_KEY_ESCAPE) { close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     @Override
     public boolean charTyped(char chr, int modifiers) {
         if (editingDelay) {
-            if (chr >= '0' && chr <= '9' && delayBuffer.length() < 5) {
-                delayBuffer += chr;
-            }
+            if (chr >= '0' && chr <= '9' && delayBuffer.length() < 5) delayBuffer += chr;
             return true;
         }
         return super.charTyped(chr, modifiers);
@@ -544,19 +582,13 @@ public class MacroScreen extends Screen {
     private void finishDelayEdit() {
         if (editingDelayId != null && !delayBuffer.isEmpty()) {
             try {
-                int val = Integer.parseInt(delayBuffer);
-                val = Math.max(1, Math.min(99999, val));
+                int val = Math.max(1, Math.min(99999, Integer.parseInt(delayBuffer)));
                 MacroConfig cfg = MacroConfig.get();
                 MacroConfig.MacroEntry entry = cfg.macros.get(editingDelayId);
-                if (entry != null) {
-                    entry.delay = val;
-                    cfg.save();
-                }
+                if (entry != null) { entry.delay = val; cfg.save(); }
             } catch (NumberFormatException ignored) {}
         }
-        editingDelay = false;
-        editingDelayId = null;
-        delayBuffer = "";
+        editingDelay = false; editingDelayId = null; delayBuffer = "";
     }
 
     // ── Utility ─────────────────────────────────────────────────────────
@@ -564,35 +596,22 @@ public class MacroScreen extends Screen {
     private int countActiveMacros(String category) {
         MacroConfig cfg = MacroConfig.get();
         int count = 0;
-        for (MacroDef def : MacroDef.ALL) {
+        for (MacroDef def : MacroDef.ALL)
             if (def.category.equals(category)) {
                 MacroConfig.MacroEntry e = cfg.macros.get(def.id);
                 if (e != null && e.active) count++;
             }
-        }
         return count;
     }
 
-    private String getPageTitle() {
-        return switch (currentCategory) {
-            case "crystal" -> "Crystal Macros";
-            case "sword" -> "Sword Macros";
-            case "mace" -> "Mace Macros";
-            case "cart" -> "Cart Macros";
-            case "uhc" -> "UHC Macros";
-            default -> "";
-        };
-    }
-
-    private String getPageSub() {
-        return switch (currentCategory) {
-            case "crystal" -> "Anchor, crystal & utility";
-            case "sword" -> "Sword & shield macros";
-            case "mace" -> "Mace & elytra combos";
-            case "cart" -> "Minecart TNT macros";
-            case "uhc" -> "Bucket & trap macros";
-            default -> "";
-        };
+    private int countAllActive() {
+        MacroConfig cfg = MacroConfig.get();
+        int count = 0;
+        for (MacroDef def : MacroDef.ALL) {
+            MacroConfig.MacroEntry e = cfg.macros.get(def.id);
+            if (e != null && e.active) count++;
+        }
+        return count;
     }
 
     private String formatSlotLabel(String slot) {
