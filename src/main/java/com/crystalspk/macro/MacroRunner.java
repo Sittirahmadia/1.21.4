@@ -225,16 +225,30 @@ public class MacroRunner {
     }
 
     // ── HC — Hit Crystal (matches hc.ahk) ───────────────────────────────
-    // obsidian+rclick → crystal+rclick → left-click to detonate
+    // Sequential: switch obsidian → wait → place → wait → switch crystal → wait → place → wait → hit
+    // Uses sequential switchSlot + sleep + click to ensure MC processes each step fully.
     private static void runHC(MacroConfig.MacroEntry e) throws InterruptedException {
         int d = Math.max(MIN_STEP_MS, e.delay);
         int obsidian = getSlot(e, "obsidianSlot");
         int crystal = getSlot(e, "crystalSlot");
 
-        switchSlotAndRightClick(obsidian);
+        // 1. Switch to obsidian
+        switchSlot(obsidian);
         sleep(d); if (!check()) return;
-        switchSlotAndRightClick(crystal);
+
+        // 2. Place obsidian
+        rightClick();
         sleep(d); if (!check()) return;
+
+        // 3. Switch to crystal
+        switchSlot(crystal);
+        sleep(d); if (!check()) return;
+
+        // 4. Place crystal
+        rightClick();
+        sleep(d); if (!check()) return;
+
+        // 5. Hit crystal to detonate
         leftClick();
     }
 
