@@ -19,7 +19,7 @@ public class MacroDef {
 
     public static final List<MacroDef> ALL = List.of(
         new MacroDef("sa",  "Single Anchor",       "crystal", 27, List.of("anchorSlot", "glowstoneSlot", "explodeSlot")),
-        new MacroDef("da",  "Double Anchor",       "crystal", 48, List.of("anchorSlot", "glowstoneSlot", "explodeSlot")),
+        new MacroDef("da",  "Double Anchor",       "crystal", 48, List.of("anchorSlot", "glowstoneSlot", "totemSlot")),
         new MacroDef("ap",  "Anchor Pearl",        "crystal", 25, List.of("anchorSlot", "glowstoneSlot", "explodeSlot", "pearlSlot")),
         new MacroDef("hc",  "Hit Crystal",         "crystal", 50, List.of("obsidianSlot", "crystalSlot")),
         new MacroDef("ac",  "Auto Crystal",        "crystal", 25, List.of("crystalSlot")),
