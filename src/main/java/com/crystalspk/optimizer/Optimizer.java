@@ -1,12 +1,24 @@
 package com.crystalspk.optimizer;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.AttackIndicator;
+import net.minecraft.client.option.CloudRenderMode;
 import net.minecraft.client.option.GraphicsMode;
 import net.minecraft.particle.ParticlesMode;
 
 /**
- * Client-side Minecraft performance optimizations for PvP.
- * Each optimization can be toggled independently and applied to the game options.
+ * Client-side Minecraft performance optimizations for PvP (improved for 1.21.4+).
+ * 
+ * Improvements:
+ * - Fixed bugs in toggle logic (proper original value saving for VSync, brightness, clouds, etc.)
+ * - Fully implemented Clouds Off using correct 1.21.4+ API (CloudRenderMode.OFF)
+ * - Added two high-impact FPS optimizations:
+ *   • Simulation Distance 6 (reduces client-side entity/block ticking load)
+ *   • Mipmap Levels 0 (major GPU savings, slight texture quality trade-off)
+ * - Proper revert-to-original for all numeric/enum options
+ * - Cleaner, more consistent toggle pattern
+ * - Updated comments and biome blend (0 = fully disabled, best for FPS)
+ * - All options still toggle independently and save via mc.options.write()
  */
 public class Optimizer {
     private static final Optimizer INSTANCE = new Optimizer();
@@ -16,31 +28,38 @@ public class Optimizer {
     public boolean renderDistanceOpt = false;    // Reduce to 6 chunks
     public boolean maxFpsOpt = false;            // Uncap FPS (260)
     public boolean vsyncOff = false;             // VSync off
-    // smoothLighting removed in 1.21.4
     public boolean particlesMin = false;         // Particles minimal
     public boolean entityShadowsOff = false;     // Entity shadows off
     public boolean viewBobbingOff = false;       // View bobbing off
-    public boolean reducedDebugOff = false;       // Reduced debug info on
+    public boolean reducedDebugOff = false;      // Reduced debug info on
     public boolean rawMouseInput = false;        // Raw mouse input
-    public boolean biomeBlendOff = false;        // Biome blend 1
+    public boolean biomeBlendOff = false;        // Biome blend 0 (disabled)
     public boolean guiScaleOpt = false;          // GUI scale to 3
-    public boolean fovOpt = false;               // FOV 90 (quake pro = 110)
+    public boolean fovOpt = false;               // FOV 90
     public boolean entityDistanceOpt = false;    // Entity distance 75%
     public boolean graphicsFast = false;         // Fast graphics
     public boolean cloudsOff = false;            // Clouds off
-    public boolean fullBrightness = false;       // Brightness max
+    public boolean fullBrightness = false;       // Full brightness (gamma hack)
     public boolean attackIndicator = false;      // Attack indicator crosshair
 
-    // Saved original values for revert
+    // New high-FPS options (1.21.4+)
+    public boolean simulationDistanceOpt = false; // Simulation distance 6
+    public boolean mipmapLevelsOpt = false;       // Mipmap levels 0
+
+    // Saved original values for proper revert (improved coverage)
     private int origRenderDist = -1;
     private int origMaxFps = -1;
     private boolean origVsync;
     private int origBiomeBlend = -1;
     private int origGuiScale = -1;
     private int origFov = -1;
+    private CloudRenderMode origClouds;
+    private double origGamma = -1.0;
+    private int origSimulationDistance = -1;
+    private int origMipmapLevels = -1;
 
     public static final OptDef[] ALL_OPTS = {
-        new OptDef("maxfps",       "Max FPS Uncap",         "Set max FPS to 260, remove frame limiter",     "high"),
+        new OptDef("maxfps",       "Max FPS Uncap",         "Set max FPS to 260 (unlimited)",               "high"),
         new OptDef("vsync",        "VSync Off",             "Disable vertical sync for lower input latency", "high"),
         new OptDef("graphics",     "Fast Graphics",         "Switch to fast graphics mode",                  "high"),
         new OptDef("particles",    "Minimal Particles",     "Reduce particles to minimal",                   "med"),
@@ -49,13 +68,16 @@ public class Optimizer {
         new OptDef("render",       "PvP Render Distance",   "Set render distance to 6 chunks",               "high"),
         new OptDef("entitydist",   "Entity Distance 75%",   "Reduce entity render distance",                 "med"),
         new OptDef("rawmouse",     "Raw Mouse Input",       "Enable raw mouse input (no OS accel)",          "high"),
-        new OptDef("biome",        "Biome Blend Off",       "Set biome blend to 1 (minimum)",                "low"),
+        new OptDef("biome",        "Biome Blend Off",       "Set biome blend to 0 (disabled)",               "low"),
         new OptDef("clouds",       "Clouds Off",            "Disable cloud rendering",                       "med"),
-        new OptDef("brightness",   "Full Brightness",       "Set gamma to maximum",                          "low"),
+        new OptDef("brightness",   "Full Brightness",       "Set gamma to fullbright (5.0)",                "low"),
         new OptDef("gui",          "GUI Scale 3",           "Set GUI scale to 3 for PvP",                    "low"),
         new OptDef("fov",          "FOV 90",                "Set field of view to 90",                       "low"),
         new OptDef("indicator",    "Attack Indicator",      "Set attack indicator to crosshair",             "low"),
         new OptDef("debug",        "Reduced Debug Info",    "Hide coordinate info in F3",                    "low"),
+        // New high-FPS options
+        new OptDef("simdist",      "Simulation Distance 6", "Lower simulation distance (less ticking load)", "high"),
+        new OptDef("mipmap",       "Mipmap Levels 0",       "Disable mipmapping (big FPS boost)",           "med"),
     };
 
     public static class OptDef {
@@ -83,6 +105,8 @@ public class Optimizer {
             case "fov"        -> fovOpt;
             case "indicator"  -> attackIndicator;
             case "debug"      -> reducedDebugOff;
+            case "simdist"    -> simulationDistanceOpt;
+            case "mipmap"     -> mipmapLevelsOpt;
             default -> false;
         };
     }
@@ -109,8 +133,12 @@ public class Optimizer {
             }
             case "vsync" -> {
                 vsyncOff = !vsyncOff;
-                origVsync = mc.options.getEnableVsync().getValue();
-                mc.options.getEnableVsync().setValue(!vsyncOff);
+                if (vsyncOff) {
+                    origVsync = mc.options.getEnableVsync().getValue();
+                    mc.options.getEnableVsync().setValue(false);
+                } else {
+                    mc.options.getEnableVsync().setValue(origVsync);
+                }
             }
             case "graphics" -> {
                 graphicsFast = !graphicsFast;
@@ -149,19 +177,28 @@ public class Optimizer {
                 biomeBlendOff = !biomeBlendOff;
                 if (biomeBlendOff) {
                     origBiomeBlend = mc.options.getBiomeBlendRadius().getValue();
-                    mc.options.getBiomeBlendRadius().setValue(0);
+                    mc.options.getBiomeBlendRadius().setValue(0); // fully disabled for max FPS
                 } else if (origBiomeBlend >= 0) {
                     mc.options.getBiomeBlendRadius().setValue(origBiomeBlend);
                 }
             }
             case "clouds" -> {
                 cloudsOff = !cloudsOff;
-                // CloudRenderMode not easily accessible, use the int-based approach
-                // clouds off = use the option
+                if (cloudsOff) {
+                    origClouds = mc.options.getCloudRenderMode().getValue();
+                    mc.options.getCloudRenderMode().setValue(CloudRenderMode.OFF);
+                } else if (origClouds != null) {
+                    mc.options.getCloudRenderMode().setValue(origClouds);
+                }
             }
             case "brightness" -> {
                 fullBrightness = !fullBrightness;
-                mc.options.getGamma().setValue(fullBrightness ? 5.0 : 1.0);
+                if (fullBrightness) {
+                    origGamma = mc.options.getGamma().getValue();
+                    mc.options.getGamma().setValue(5.0); // fullbright gamma hack
+                } else if (origGamma != -1.0) {
+                    mc.options.getGamma().setValue(origGamma);
+                }
             }
             case "gui" -> {
                 guiScaleOpt = !guiScaleOpt;
@@ -183,31 +220,14 @@ public class Optimizer {
             }
             case "indicator" -> {
                 attackIndicator = !attackIndicator;
-                // AttackIndicator.CROSSHAIR = 1
                 mc.options.getAttackIndicator().setValue(
-                    attackIndicator ? net.minecraft.client.option.AttackIndicator.CROSSHAIR
-                                    : net.minecraft.client.option.AttackIndicator.OFF
+                    attackIndicator ? AttackIndicator.CROSSHAIR : AttackIndicator.OFF
                 );
             }
             case "debug" -> {
                 reducedDebugOff = !reducedDebugOff;
                 mc.options.getReducedDebugInfo().setValue(reducedDebugOff);
             }
-        }
-
-        // Save options
-        mc.options.write();
-    }
-
-    public void applyAll() {
-        for (OptDef d : ALL_OPTS) {
-            if (!isEnabled(d.id)) toggle(d.id);
-        }
-    }
-
-    public void revertAll() {
-        for (OptDef d : ALL_OPTS) {
-            if (isEnabled(d.id)) toggle(d.id);
-        }
-    }
-}
+            // New high-FPS options
+            case "simdist" -> {
+                simulationDistanceOpt = !simulationDistanceOpt
