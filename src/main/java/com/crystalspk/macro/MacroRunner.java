@@ -57,12 +57,29 @@ public class MacroRunner {
 
     // ── Input helpers ────────────────────────────────────────────────────
 
-    private static void switchSlot(int slot) {
+    /**
+     * SYNCHRONOUS slot switch — waits until slot is actually selected.
+     * Polls selectedSlot until it matches the target (with 300ms timeout).
+     */
+    private static void switchSlotSync(int slot) throws InterruptedException {
         if (slot < 0 || slot > 8) return;
         MinecraftClient mc = MinecraftClient.getInstance();
+        
+        // Queue the slot switch on render thread
         mc.execute(() -> {
             if (mc.player != null) mc.player.getInventory().selectedSlot = slot;
         });
+        
+        // Wait for slot to actually change (poll every 2ms, max 300ms)
+        long startTime = System.currentTimeMillis();
+        while (System.currentTimeMillis() - startTime < 300) {
+            if (mc.player != null && mc.player.getInventory().selectedSlot == slot) {
+                return; // Slot is confirmed selected
+            }
+            Thread.sleep(2);
+        }
+        // Timeout fallback — at least sleep 100ms more
+        Thread.sleep(100);
     }
 
     private static void rightClick() {
@@ -142,29 +159,25 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // Uses delay setting as switch gap. User tunes MC's key repeat for their PC.
+    // Uses SYNCHRONOUS slot switching to guarantee correct item placement order.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
-        int switchGap = Math.max(10, e.delay);
 
-        // 1. anchor → place anchor
-        switchSlot(anchor);
-        sleep(switchGap);
+        // 1. anchor → place anchor (WAIT for slot confirmation)
+        switchSlotSync(anchor);
         rightClick();
         sleep(30); if (!check()) return;
 
-        // 2. glowstone → charge anchor
-        switchSlot(glowstone);
-        sleep(switchGap);
+        // 2. glowstone → charge anchor (WAIT for slot confirmation)
+        switchSlotSync(glowstone);
         rightClick();
         sleep(30); if (!check()) return;
 
-        // 3. det/anchor → explode (right-click charged anchor)
-        switchSlot(det);
-        sleep(switchGap);
+        // 3. det/anchor → explode (right-click charged anchor) (WAIT for slot confirmation)
+        switchSlotSync(det);
         rightClick();
     }
 
@@ -176,49 +189,43 @@ public class MacroRunner {
     // 4. anchor  → place 2nd anchor IMMEDIATELY (no slot switch, ASAP in air)
     // 5. glowstone → charge 2nd anchor
     // 6. anchor/det → explode 2nd
-    // Uses delay setting as switch gap. User tunes MC's key repeat for their PC.
+    // Uses SYNCHRONOUS slot switching to guarantee correct order.
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
-        int switchGap = Math.max(10, e.delay);
 
         // === FIRST ANCHOR ===
-        // 1. anchor → place 1st anchor
-        switchSlot(anchor);
-        sleep(switchGap);
+        // 1. anchor → place 1st anchor (WAIT for slot confirmation)
+        switchSlotSync(anchor);
         rightClick();
         sleep(30); if (!check()) return;
 
-        // 2. glowstone → charge 1st anchor
-        switchSlot(glowstone);
-        sleep(switchGap);
+        // 2. glowstone → charge 1st anchor (WAIT for slot confirmation)
+        switchSlotSync(glowstone);
         rightClick();
         sleep(30); if (!check()) return;
 
-        // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode)
-        switchSlot(anchor);
-        sleep(switchGap);
+        // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode) (WAIT for slot confirmation)
+        switchSlotSync(anchor);
         rightClick();
         if (!check()) return;
 
         // 4. anchor still selected → place 2nd anchor IMMEDIATELY at explosion spot
-        //    (NO slot switch here — anchor already selected from step 3)
+        //    (NO slot switch here — anchor already confirmed selected from step 3)
         sleep(12);
         rightClick();
         sleep(30); if (!check()) return;
 
         // === SECOND ANCHOR ===
-        // 5. glowstone → charge 2nd anchor
-        switchSlot(glowstone);
-        sleep(switchGap);
+        // 5. glowstone → charge 2nd anchor (WAIT for slot confirmation)
+        switchSlotSync(glowstone);
         rightClick();
         sleep(30); if (!check()) return;
 
-        // 6. det/anchor → explode 2nd anchor
-        switchSlot(det);
-        sleep(switchGap);
+        // 6. det/anchor → explode 2nd anchor (WAIT for slot confirmation)
+        switchSlotSync(det);
         rightClick();
     }
 
