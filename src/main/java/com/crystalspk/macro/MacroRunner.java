@@ -32,6 +32,11 @@ public class MacroRunner {
         running.clear();
     }
 
+    /** Cancel a specific running macro by id (used by Hold/Loop stop). */
+    public static void cancelForId(String id) {
+        running.remove(id);
+    }
+
     private static boolean check() {
         return !globalCancel.get() && !Thread.currentThread().isInterrupted();
     }
@@ -136,41 +141,41 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // Higher switch gaps to guarantee MC registers the slot before click.
-    // If anchor already placed (not charged), the anchor rclick does nothing
-    // harmful — glowstone still charges it, explode still detonates.
+    // All sleeps >= 55ms (> 1 MC tick = 50ms) so slot change is committed
+    // before the right-click fires. Prevents glowstone-before-anchor bug.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. Switch to anchor → 40ms → place
+        // 1. anchor → place anchor
         switchSlot(anchor);
-        sleep(40);
-        rightClick();
-        sleep(35); if (!check()) return;
-
-        // 2. Switch to glowstone → 45ms → charge
-        switchSlot(glowstone);
-        sleep(45);
+        sleep(55);
         rightClick();
         sleep(40); if (!check()) return;
 
-        // 3. Switch to explode slot → 50ms → detonate
+        // 2. glowstone → charge anchor
+        switchSlot(glowstone);
+        sleep(55);
+        rightClick();
+        sleep(40); if (!check()) return;
+
+        // 3. det/anchor → explode (right-click charged anchor)
         switchSlot(det);
-        sleep(50);
+        sleep(55);
         rightClick();
     }
 
     // ── DA — Double Anchor ───────────────────────────────────────────────
-    // Matches the video sequence exactly:
-    // 1. anchor → rclick (place)
-    // 2. glowstone → rclick (charge)
-    // 3. explodeSlot → rclick (detonate 1st)
-    // 4. anchor → rclick immediately (place 2nd at blast spot)
-    // 5. glowstone → rclick (charge 2nd)
-    // 6. explodeSlot → rclick (detonate 2nd)
+    // Correct sequence (user-verified):
+    // 1. anchor  → place 1st anchor
+    // 2. glowstone → charge 1st anchor
+    // 3. anchor  → explode 1st (right-clicking charged anchor = explode)
+    // 4. anchor  → place 2nd anchor IMMEDIATELY (no slot switch, ASAP in air)
+    // 5. glowstone → charge 2nd anchor
+    // 6. anchor/det → explode 2nd
+    // All slot-to-click gaps >= 55ms (> 1 MC tick) to prevent wrong-item-placed bug.
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
@@ -178,40 +183,40 @@ public class MacroRunner {
         int det = explode >= 0 ? explode : anchor;
 
         // === FIRST ANCHOR ===
-        // 1. Switch to anchor → place
+        // 1. anchor → place 1st anchor
         switchSlot(anchor);
-        sleep(40);
+        sleep(55);
         rightClick();
-        sleep(35); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 2. Switch to glowstone → charge
+        // 2. glowstone → charge 1st anchor
         switchSlot(glowstone);
-        sleep(40);
+        sleep(55);
         rightClick();
-        sleep(35); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 3. Switch to EXPLODE SLOT → detonate 1st
-        switchSlot(det);
-        sleep(40);
+        // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode)
+        switchSlot(anchor);
+        sleep(55);
         rightClick();
         if (!check()) return;
 
-        // === SECOND ANCHOR (immediately after explosion) ===
-        // 4. Switch to anchor → place 2nd at blast spot (zero delay intent)
-        switchSlot(anchor);
-        sleep(30);
+        // 4. anchor still selected → place 2nd anchor IMMEDIATELY at explosion spot
+        //    (NO slot switch here — anchor already selected from step 3)
+        sleep(12);
         rightClick();
-        sleep(35); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 5. Switch to glowstone → charge 2nd
+        // === SECOND ANCHOR ===
+        // 5. glowstone → charge 2nd anchor
         switchSlot(glowstone);
-        sleep(40);
+        sleep(55);
         rightClick();
-        sleep(35); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 6. Switch to explode slot → detonate 2nd
+        // 6. det/anchor → explode 2nd anchor
         switchSlot(det);
-        sleep(40);
+        sleep(55);
         rightClick();
     }
 

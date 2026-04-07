@@ -32,6 +32,10 @@ public class MacroEngine {
     private Future<?> fxpFuture;
     private Future<?> acFuture;
 
+    // Hold / Loop mode state
+    private final java.util.concurrent.ConcurrentHashMap<String, Future<?>> modeFutures = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.Set<String> loopActive = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     public static MacroEngine get() { return INSTANCE; }
 
     /**
@@ -65,7 +69,7 @@ public class MacroEngine {
             boolean isDown = isBindDown(window, entry.keybind);
             String id = def.id;
 
-            // Hold-to-run macros (FXP, AC)
+            // ── Legacy hold-to-run macros (FXP, AC always use their own logic) ──
             if (id.equals("fxp") || id.equals("ac")) {
                 if (isDown && !pressedKeys.contains(id)) {
                     pressedKeys.add(id);
@@ -77,17 +81,70 @@ public class MacroEngine {
                 continue;
             }
 
-            // One-shot macros
-            if (isDown && !pressedKeys.contains(id)) {
-                pressedKeys.add(id);
-                if (!MacroRunner.isRunning(id)) {
-                    final MacroConfig.MacroEntry e = entry;
-                    executor.submit(() -> MacroRunner.dispatch(id, e));
+            int mode = entry.mode; // 0=single, 1=hold, 2=loop
+
+            if (mode == MacroConfig.MODE_SINGLE) {
+                // Fire once on keydown, wait for key-up before allowing again
+                if (isDown && !pressedKeys.contains(id)) {
+                    pressedKeys.add(id);
+                    if (!MacroRunner.isRunning(id)) {
+                        final MacroConfig.MacroEntry e = entry;
+                        executor.submit(() -> MacroRunner.dispatch(id, e));
+                    }
+                } else if (!isDown) {
+                    pressedKeys.remove(id);
                 }
-            } else if (!isDown) {
-                pressedKeys.remove(id);
+
+            } else if (mode == MacroConfig.MODE_HOLD) {
+                // Run macro repeatedly while key is held, stop when released
+                if (isDown && !pressedKeys.contains(id)) {
+                    pressedKeys.add(id);
+                    loopActive.add(id);
+                    final MacroConfig.MacroEntry e = entry;
+                    Future<?> f = executor.submit(() -> {
+                        while (loopActive.contains(id)) {
+                            MacroRunner.dispatch(id, e);
+                            // Small gap between repetitions
+                            try { Thread.sleep(Math.max(20, e.delay)); } catch (InterruptedException ex) { break; }
+                        }
+                    });
+                    modeFutures.put(id, f);
+                } else if (!isDown && pressedKeys.contains(id)) {
+                    pressedKeys.remove(id);
+                    stopModeLoop(id);
+                }
+
+            } else if (mode == MacroConfig.MODE_LOOP) {
+                // Toggle: first press = start looping, second press = stop
+                if (isDown && !pressedKeys.contains(id)) {
+                    pressedKeys.add(id);
+                    if (loopActive.contains(id)) {
+                        // Second press — stop
+                        stopModeLoop(id);
+                    } else {
+                        // First press — start
+                        loopActive.add(id);
+                        final MacroConfig.MacroEntry e = entry;
+                        Future<?> f = executor.submit(() -> {
+                            while (loopActive.contains(id)) {
+                                MacroRunner.dispatch(id, e);
+                                try { Thread.sleep(Math.max(20, e.delay)); } catch (InterruptedException ex) { break; }
+                            }
+                        });
+                        modeFutures.put(id, f);
+                    }
+                } else if (!isDown) {
+                    pressedKeys.remove(id);
+                }
             }
         }
+    }
+
+    private void stopModeLoop(String id) {
+        loopActive.remove(id);
+        Future<?> f = modeFutures.remove(id);
+        if (f != null) f.cancel(true);
+        MacroRunner.cancelForId(id);
     }
 
     private void startHoldMacro(String id, MacroConfig.MacroEntry entry) {
