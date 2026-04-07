@@ -9,44 +9,35 @@ import net.minecraft.particle.ParticlesMode;
 /**
  * Client-side Minecraft performance optimizations for PvP (improved for 1.21.4+).
  * 
- * Improvements:
- * - Fixed bugs in toggle logic (proper original value saving for VSync, brightness, clouds, etc.)
- * - Fully implemented Clouds Off using correct 1.21.4+ API (CloudRenderMode.OFF)
- * - Added two high-impact FPS optimizations:
- *   • Simulation Distance 6 (reduces client-side entity/block ticking load)
- *   • Mipmap Levels 0 (major GPU savings, slight texture quality trade-off)
- * - Proper revert-to-original for all numeric/enum options
- * - Cleaner, more consistent toggle pattern
- * - Updated comments and biome blend (0 = fully disabled, best for FPS)
- * - All options still toggle independently and save via mc.options.write()
+ * Fixed: All braces are now correctly closed → no more "reached end of file while parsing" error.
  */
 public class Optimizer {
     private static final Optimizer INSTANCE = new Optimizer();
     public static Optimizer get() { return INSTANCE; }
 
     // ── Optimization States ──────────────────────────────────────────────
-    public boolean renderDistanceOpt = false;    // Reduce to 6 chunks
-    public boolean maxFpsOpt = false;            // Uncap FPS (260)
-    public boolean vsyncOff = false;             // VSync off
-    public boolean particlesMin = false;         // Particles minimal
-    public boolean entityShadowsOff = false;     // Entity shadows off
-    public boolean viewBobbingOff = false;       // View bobbing off
-    public boolean reducedDebugOff = false;      // Reduced debug info on
-    public boolean rawMouseInput = false;        // Raw mouse input
-    public boolean biomeBlendOff = false;        // Biome blend 0 (disabled)
-    public boolean guiScaleOpt = false;          // GUI scale to 3
-    public boolean fovOpt = false;               // FOV 90
-    public boolean entityDistanceOpt = false;    // Entity distance 75%
-    public boolean graphicsFast = false;         // Fast graphics
-    public boolean cloudsOff = false;            // Clouds off
-    public boolean fullBrightness = false;       // Full brightness (gamma hack)
-    public boolean attackIndicator = false;      // Attack indicator crosshair
+    public boolean renderDistanceOpt = false;
+    public boolean maxFpsOpt = false;
+    public boolean vsyncOff = false;
+    public boolean particlesMin = false;
+    public boolean entityShadowsOff = false;
+    public boolean viewBobbingOff = false;
+    public boolean reducedDebugOff = false;
+    public boolean rawMouseInput = false;
+    public boolean biomeBlendOff = false;
+    public boolean guiScaleOpt = false;
+    public boolean fovOpt = false;
+    public boolean entityDistanceOpt = false;
+    public boolean graphicsFast = false;
+    public boolean cloudsOff = false;
+    public boolean fullBrightness = false;
+    public boolean attackIndicator = false;
 
     // New high-FPS options (1.21.4+)
-    public boolean simulationDistanceOpt = false; // Simulation distance 6
-    public boolean mipmapLevelsOpt = false;       // Mipmap levels 0
+    public boolean simulationDistanceOpt = false;
+    public boolean mipmapLevelsOpt = false;
 
-    // Saved original values for proper revert (improved coverage)
+    // Saved original values
     private int origRenderDist = -1;
     private int origMaxFps = -1;
     private boolean origVsync;
@@ -75,7 +66,6 @@ public class Optimizer {
         new OptDef("fov",          "FOV 90",                "Set field of view to 90",                       "low"),
         new OptDef("indicator",    "Attack Indicator",      "Set attack indicator to crosshair",             "low"),
         new OptDef("debug",        "Reduced Debug Info",    "Hide coordinate info in F3",                    "low"),
-        // New high-FPS options
         new OptDef("simdist",      "Simulation Distance 6", "Lower simulation distance (less ticking load)", "high"),
         new OptDef("mipmap",       "Mipmap Levels 0",       "Disable mipmapping (big FPS boost)",           "med"),
     };
@@ -177,7 +167,7 @@ public class Optimizer {
                 biomeBlendOff = !biomeBlendOff;
                 if (biomeBlendOff) {
                     origBiomeBlend = mc.options.getBiomeBlendRadius().getValue();
-                    mc.options.getBiomeBlendRadius().setValue(0); // fully disabled for max FPS
+                    mc.options.getBiomeBlendRadius().setValue(0);
                 } else if (origBiomeBlend >= 0) {
                     mc.options.getBiomeBlendRadius().setValue(origBiomeBlend);
                 }
@@ -195,7 +185,7 @@ public class Optimizer {
                 fullBrightness = !fullBrightness;
                 if (fullBrightness) {
                     origGamma = mc.options.getGamma().getValue();
-                    mc.options.getGamma().setValue(5.0); // fullbright gamma hack
+                    mc.options.getGamma().setValue(5.0);
                 } else if (origGamma != -1.0) {
                     mc.options.getGamma().setValue(origGamma);
                 }
@@ -228,6 +218,39 @@ public class Optimizer {
                 reducedDebugOff = !reducedDebugOff;
                 mc.options.getReducedDebugInfo().setValue(reducedDebugOff);
             }
-            // New high-FPS options
             case "simdist" -> {
-                simulationDistanceOpt = !simulationDistanceOpt
+                simulationDistanceOpt = !simulationDistanceOpt;
+                if (simulationDistanceOpt) {
+                    origSimulationDistance = mc.options.getSimulationDistance().getValue();
+                    mc.options.getSimulationDistance().setValue(6);
+                } else if (origSimulationDistance > 0) {
+                    mc.options.getSimulationDistance().setValue(origSimulationDistance);
+                }
+            }
+            case "mipmap" -> {
+                mipmapLevelsOpt = !mipmapLevelsOpt;
+                if (mipmapLevelsOpt) {
+                    origMipmapLevels = mc.options.getMipmapLevels().getValue();
+                    mc.options.getMipmapLevels().setValue(0);
+                } else if (origMipmapLevels >= 0) {
+                    mc.options.getMipmapLevels().setValue(origMipmapLevels);
+                }
+            }
+        }
+
+        // Save options to disk
+        mc.options.write();
+    }
+
+    public void applyAll() {
+        for (OptDef d : ALL_OPTS) {
+            if (!isEnabled(d.id)) toggle(d.id);
+        }
+    }
+
+    public void revertAll() {
+        for (OptDef d : ALL_OPTS) {
+            if (isEnabled(d.id)) toggle(d.id);
+        }
+    }
+        }
