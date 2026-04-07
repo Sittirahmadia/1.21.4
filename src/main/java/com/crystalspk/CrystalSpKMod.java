@@ -1,6 +1,10 @@
 package com.crystalspk;
 
 import com.crystalspk.config.MacroConfig;
+import com.crystalspk.fullbright.FullbrightConfig;
+import com.crystalspk.fullbright.FullbrightEventHandler;
+import com.crystalspk.fullbright.FullbrightKeybind;
+import com.crystalspk.fullbright.FullbrightModule;
 import com.crystalspk.gui.MacroScreen;
 import com.crystalspk.macro.MacroEngine;
 import net.fabricmc.api.ClientModInitializer;
@@ -17,8 +21,13 @@ public class CrystalSpKMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Load config
+        // Load configs
         MacroConfig.get();
+        FullbrightConfig.getInstance();
+        
+        // Initialize fullbright keybinds and event handler
+        FullbrightKeybind.register();
+        FullbrightEventHandler.init();
 
         // Register GUI keybinding (default: Right Shift)
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
@@ -39,6 +48,8 @@ public class CrystalSpKMod implements ClientModInitializer {
             MacroEngine.get().tick();
         });
 
-        System.out.println("[CrystalSpK] Mod initialized! Press Right Shift to open macro GUI.");
+        System.out.println("[CrystalSpK] Mod initialized!");
+        System.out.println("[CrystalSpK] Macros: Press Right Shift to open GUI");
+        System.out.println("[CrystalSpK] Fullbright: Press F to toggle, G for settings");
     }
 }
