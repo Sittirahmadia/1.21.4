@@ -142,29 +142,29 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // CRITICAL: use 80ms between switchSlot and click to guarantee slot change
-    // is fully processed by MC before the action fires.
+    // Uses delay setting as switch gap. User tunes MC's key repeat for their PC.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
+        int switchGap = Math.max(10, e.delay);
 
         // 1. anchor → place anchor
         switchSlot(anchor);
-        sleep(80); // Wait for slot change to register
+        sleep(switchGap);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // 2. glowstone → charge anchor
         switchSlot(glowstone);
-        sleep(80); // Wait for slot change to register
+        sleep(switchGap);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // 3. det/anchor → explode (right-click charged anchor)
         switchSlot(det);
-        sleep(80); // Wait for slot change to register
+        sleep(switchGap);
         rightClick();
     }
 
@@ -176,29 +176,30 @@ public class MacroRunner {
     // 4. anchor  → place 2nd anchor IMMEDIATELY (no slot switch, ASAP in air)
     // 5. glowstone → charge 2nd anchor
     // 6. anchor/det → explode 2nd
-    // CRITICAL: All slot-to-click gaps = 80ms (not 55ms) to prevent glowstone-first bug.
+    // Uses delay setting as switch gap. User tunes MC's key repeat for their PC.
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
+        int switchGap = Math.max(10, e.delay);
 
         // === FIRST ANCHOR ===
         // 1. anchor → place 1st anchor
         switchSlot(anchor);
-        sleep(80); // CRITICAL: 80ms to ensure anchor slot is selected
+        sleep(switchGap);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // 2. glowstone → charge 1st anchor
         switchSlot(glowstone);
-        sleep(80); // CRITICAL: 80ms to ensure glowstone slot is selected
+        sleep(switchGap);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode)
         switchSlot(anchor);
-        sleep(80); // CRITICAL: 80ms to ensure anchor slot is selected for explode
+        sleep(switchGap);
         rightClick();
         if (!check()) return;
 
@@ -206,18 +207,18 @@ public class MacroRunner {
         //    (NO slot switch here — anchor already selected from step 3)
         sleep(12);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // === SECOND ANCHOR ===
         // 5. glowstone → charge 2nd anchor
         switchSlot(glowstone);
-        sleep(80); // CRITICAL: 80ms to ensure glowstone slot is selected
+        sleep(switchGap);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(30); if (!check()) return;
 
         // 6. det/anchor → explode 2nd anchor
         switchSlot(det);
-        sleep(80); // CRITICAL: 80ms to ensure det slot is selected
+        sleep(switchGap);
         rightClick();
     }
 
