@@ -58,8 +58,21 @@ public class MacroRunner {
     // ── Input helpers ────────────────────────────────────────────────────
 
     /**
+     * ASYNC slot switch (queues on render thread).
+     * Used by macros that don't need immediate confirmation.
+     */
+    private static void switchSlot(int slot) {
+        if (slot < 0 || slot > 8) return;
+        MinecraftClient mc = MinecraftClient.getInstance();
+        mc.execute(() -> {
+            if (mc.player != null) mc.player.getInventory().selectedSlot = slot;
+        });
+    }
+
+    /**
      * SYNCHRONOUS slot switch — waits until slot is actually selected.
      * Polls selectedSlot until it matches the target (with 300ms timeout).
+     * Used by SA, DA, and slotThen* helper methods.
      */
     private static void switchSlotSync(int slot) throws InterruptedException {
         if (slot < 0 || slot > 8) return;
