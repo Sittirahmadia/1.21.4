@@ -45,8 +45,8 @@ public class MacroRunner {
     }
 
     // ── Timing Constants ─────────────────────────────────────────────────
-    private static final int SWITCH_GAP = 90;
-    private static final int STEP_GAP = 55;
+    private static final int SWITCH_GAP = 80;
+    private static final int STEP_GAP = 40;
 
     // ── Input helpers ────────────────────────────────────────────────────
 
@@ -151,11 +151,11 @@ public class MacroRunner {
 
         switchSlotSync(anchor);
         rightClick();
-        sleep(20); if (!check()) return;
+        sleep(25); if (!check()) return;
 
         switchSlotSync(glowstone);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(35); if (!check()) return;
 
         switchSlotSync(det);
         rightClick();
@@ -176,24 +176,24 @@ public class MacroRunner {
 
         switchSlotSync(glowstone);
         rightClick();
-        sleep(40); if (!check()) return;
+        sleep(45); if (!check()) return;
 
         switchSlotSync(anchor);
         rightClick();
-        sleep(45); if (!check()) return;
+        sleep(55; if (!check()) return;
 
         sleep(10);
         rightClick();
-        sleep(50); if (!check()) return;
+        sleep(60); if (!check()) return;
 
         // === SECOND ANCHOR ===
         switchSlotSync(glowstone);
         rightClick();
-        sleep(55); if (!check()) return;
+        sleep(65); if (!check()) return;
 
         switchSlotSync(det);
         rightClick();
-        sleep(65);
+        sleep(75);
     }
 
     // ── AP — Anchor Pearl ────────────────────────────────────────────────
