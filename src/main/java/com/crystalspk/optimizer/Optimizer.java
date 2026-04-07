@@ -2,7 +2,7 @@ package com.crystalspk.optimizer;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.GraphicsMode;
-import net.minecraft.client.option.ParticlesMode;
+import net.minecraft.particle.ParticlesMode;
 
 /**
  * Client-side Minecraft performance optimizations for PvP.
