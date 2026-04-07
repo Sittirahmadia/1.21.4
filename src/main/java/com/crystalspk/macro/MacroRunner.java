@@ -142,27 +142,30 @@ public class MacroRunner {
         }
     }
 
-    // ── SA — Single Anchor (UPDATED per your new code) ─────────────────────
+    // ── SA — Single Anchor: anchor → glowstone → explode ─────────────────
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
+        // Place anchor
         switchSlotSync(anchor);
         rightClick();
-        sleep(25); if (!check()) return;
+        sleep(50); if (!check()) return;
 
+        // Place glowstone
         switchSlotSync(glowstone);
         rightClick();
-        sleep(35); if (!check()) return;
+        sleep(50); if (!check()) return;
 
+        // Explode
         switchSlotSync(det);
         rightClick();
-        sleep(50); if (!check()) return;
+        sleep(60); if (!check()) return;
     }
 
-    // ── DA — Double Anchor ───────────────────────────────────────────────
+    // ── DA — Double Anchor: anchor → glowstone → anchor (2x click) → explode → glowstone → explode
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
@@ -172,28 +175,37 @@ public class MacroRunner {
         // === FIRST ANCHOR ===
         switchSlotSync(anchor);
         rightClick();
-        sleep(30); if (!check()) return;
+        sleep(60); if (!check()) return;
 
+        // Place glowstone on first anchor
         switchSlotSync(glowstone);
-        rightClick();
-        sleep(45); if (!check()) return;
-
-        switchSlotSync(anchor);
-        rightClick();
-        sleep(55); if (!check()) return;
-
-        sleep(10);
         rightClick();
         sleep(60); if (!check()) return;
 
-        // === SECOND ANCHOR ===
-        switchSlotSync(glowstone);
+        // === PLACE SECOND ANCHOR ===
+        switchSlotSync(anchor);
         rightClick();
-        sleep(65); if (!check()) return;
+        sleep(60); if (!check()) return;
 
+        // Double-click to place second anchor
+        sleep(20);
+        rightClick();
+        sleep(80); if (!check()) return;
+
+        // === EXPLODE FIRST ANCHOR ===
         switchSlotSync(det);
         rightClick();
-        sleep(75);
+        sleep(80); if (!check()) return;
+
+        // === PLACE GLOWSTONE ON SECOND ANCHOR ===
+        switchSlotSync(glowstone);
+        rightClick();
+        sleep(60); if (!check()) return;
+
+        // === EXPLODE SECOND ANCHOR ===
+        switchSlotSync(det);
+        rightClick();
+        sleep(80);
     }
 
     // ── AP — Anchor Pearl ────────────────────────────────────────────────
