@@ -49,11 +49,11 @@ public class MacroRunner {
     // SWITCH_GAP: time from switchSlot() call to rightClick() call.
     // MUST be >= 80ms for proper slot change processing.
     // (MC render thread updates inventory async, need buffer)
-    private static final int SWITCH_GAP = 80;
+    private static final int SWITCH_GAP = 90;
 
     // STEP_GAP: time between a click and next action.
     // Ensures MC processes the action before next step.
-    private static final int STEP_GAP = 40;
+    private static final int STEP_GAP = 55;
 
     // ── Input helpers ────────────────────────────────────────────────────
 
@@ -179,7 +179,7 @@ public class MacroRunner {
         // 1. anchor → place anchor (WAIT for slot confirmation)
         switchSlotSync(anchor);
         rightClick();
-        sleep(30); if (!check()) return;
+        sleep(20); if (!check()) return;
 
         // 2. glowstone → charge anchor (WAIT for slot confirmation)
         switchSlotSync(glowstone);
@@ -200,45 +200,45 @@ public class MacroRunner {
     // 5. glowstone → charge 2nd anchor
     // 6. anchor/det → explode 2nd
     // Uses SYNCHRONOUS slot switching to guarantee correct order.
-    private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
-        int anchor = getSlot(e, "anchorSlot");
-        int glowstone = getSlot(e, "glowstoneSlot");
-        int explode = getSlot(e, "explodeSlot");
-        int det = explode >= 0 ? explode : anchor;
+    
+private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
+    int anchor = getSlot(e, "anchorSlot");
+    int glowstone = getSlot(e, "glowstoneSlot");
+    int explode = getSlot(e, "explodeSlot");
+    int det = explode >= 0 ? explode : anchor;
 
-        // === FIRST ANCHOR ===
-        // 1. anchor → place 1st anchor (WAIT for slot confirmation)
-        switchSlotSync(anchor);
-        rightClick();
-        sleep(30); if (!check()) return;
+    // === FIRST ANCHOR ===
+    // 1. anchor → place 1st anchor
+    switchSlotSync(anchor);
+    rightClick();
+    sleep(30); if (!check()) return;       // 30ms
 
-        // 2. glowstone → charge 1st anchor (WAIT for slot confirmation)
-        switchSlotSync(glowstone);
-        rightClick();
-        sleep(30); if (!check()) return;
+    // 2. glowstone → charge 1st anchor
+    switchSlotSync(glowstone);
+    rightClick();
+    sleep(40); if (!check()) return;       // 40ms
 
-        // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode) (WAIT for slot confirmation)
-        switchSlotSync(anchor);
-        rightClick();
-        if (!check()) return;
+    // 3. anchor → explode 1st anchor
+    switchSlotSync(anchor);
+    rightClick();
+    sleep(45); if (!check()) return;       // 45ms
 
-        // 4. anchor still selected → place 2nd anchor IMMEDIATELY at explosion spot
-        //    (NO slot switch here — anchor already confirmed selected from step 3)
-        sleep(12);
-        rightClick();
-        sleep(30); if (!check()) return;
+    // 4. anchor still selected → place 2nd anchor IMMEDIATELY (minimal delay, e.g. 10ms)
+    sleep(10); // Fast – reduced from 12 or 50
+    rightClick();
+    sleep(50); if (!check()) return;       // 50ms after 2nd place (prepare for next phase)
 
-        // === SECOND ANCHOR ===
-        // 5. glowstone → charge 2nd anchor (WAIT for slot confirmation)
-        switchSlotSync(glowstone);
-        rightClick();
-        sleep(30); if (!check()) return;
+    // === SECOND ANCHOR ===
+    // 5. glowstone → charge 2nd anchor
+    switchSlotSync(glowstone);
+    rightClick();
+    sleep(55); if (!check()) return;       // 55ms
 
-        // 6. det/anchor → explode 2nd anchor (WAIT for slot confirmation)
-        switchSlotSync(det);
-        rightClick();
-    }
-
+    // 6. det/anchor → explode 2nd anchor
+    switchSlotSync(det);
+    rightClick();
+    sleep(65);                             // 65ms stabilization (optional, could move or remove)
+}
     // ── AP — Anchor Pearl ────────────────────────────────────────────────
     private static void runAP(MacroConfig.MacroEntry e) throws InterruptedException {
         int stepGap = Math.max(STEP_GAP, e.delay);
