@@ -180,7 +180,7 @@ public class MacroRunner {
 
         switchSlotSync(anchor);
         rightClick();
-        sleep(55; if (!check()) return;
+        sleep(55); if (!check()) return;
 
         sleep(10);
         rightClick();
