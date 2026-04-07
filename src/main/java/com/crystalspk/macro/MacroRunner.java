@@ -136,36 +136,41 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // Tuned per-step timings for fastest reliable execution.
-    // anchor=18ms, glowstone=26ms, explode=32ms
+    // Higher switch gaps to guarantee MC registers the slot before click.
+    // If anchor already placed (not charged), the anchor rclick does nothing
+    // harmful — glowstone still charges it, explode still detonates.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. Switch to anchor → 18ms → place
+        // 1. Switch to anchor → 40ms → place
         switchSlot(anchor);
-        sleep(18);
+        sleep(40);
         rightClick();
-        sleep(26); if (!check()) return;
+        sleep(35); if (!check()) return;
 
-        // 2. Switch to glowstone → 26ms → charge
+        // 2. Switch to glowstone → 45ms → charge
         switchSlot(glowstone);
-        sleep(26);
+        sleep(45);
         rightClick();
-        sleep(32); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 3. Switch to detonate → 32ms → explode
+        // 3. Switch to explode slot → 50ms → detonate
         switchSlot(det);
-        sleep(32);
+        sleep(50);
         rightClick();
     }
 
     // ── DA — Double Anchor ───────────────────────────────────────────────
-    // anchor=25ms, glowstone=30ms, explode with anchor=35ms
-    // After 1st anchor explodes: immediately double rclick to place 2nd at same spot
-    // Then charge and explode the 2nd anchor
+    // Matches the video sequence exactly:
+    // 1. anchor → rclick (place)
+    // 2. glowstone → rclick (charge)
+    // 3. explodeSlot → rclick (detonate 1st)
+    // 4. anchor → rclick immediately (place 2nd at blast spot)
+    // 5. glowstone → rclick (charge 2nd)
+    // 6. explodeSlot → rclick (detonate 2nd)
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
@@ -173,41 +178,40 @@ public class MacroRunner {
         int det = explode >= 0 ? explode : anchor;
 
         // === FIRST ANCHOR ===
-        // 1. Switch to anchor → 25ms → place
+        // 1. Switch to anchor → place
         switchSlot(anchor);
-        sleep(25);
-        rightClick();
-        sleep(30); if (!check()) return;
-
-        // 2. Switch to glowstone → 30ms → charge
-        switchSlot(glowstone);
-        sleep(30);
+        sleep(40);
         rightClick();
         sleep(35); if (!check()) return;
 
-        // 3. Switch to anchor → 35ms → detonate 1st (rclick charged anchor = explode)
-        switchSlot(anchor);
-        sleep(35);
-        rightClick();
-
-        // 4. Immediately double rclick to place 2nd anchor at explosion spot
-        //    Already on anchor slot — just spam rclick fast
-        sleep(10); if (!check()) return;
-        rightClick();
-        sleep(10);
-        rightClick();
-        sleep(30); if (!check()) return;
-
-        // === SECOND ANCHOR (now placed) ===
-        // 5. Switch to glowstone → 30ms → charge 2nd
+        // 2. Switch to glowstone → charge
         switchSlot(glowstone);
-        sleep(30);
+        sleep(40);
         rightClick();
         sleep(35); if (!check()) return;
 
-        // 6. Switch to explode slot → 35ms → detonate 2nd
+        // 3. Switch to EXPLODE SLOT → detonate 1st
         switchSlot(det);
-        sleep(35);
+        sleep(40);
+        rightClick();
+        if (!check()) return;
+
+        // === SECOND ANCHOR (immediately after explosion) ===
+        // 4. Switch to anchor → place 2nd at blast spot (zero delay intent)
+        switchSlot(anchor);
+        sleep(30);
+        rightClick();
+        sleep(35); if (!check()) return;
+
+        // 5. Switch to glowstone → charge 2nd
+        switchSlot(glowstone);
+        sleep(40);
+        rightClick();
+        sleep(35); if (!check()) return;
+
+        // 6. Switch to explode slot → detonate 2nd
+        switchSlot(det);
+        sleep(40);
         rightClick();
     }
 
