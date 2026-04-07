@@ -16,7 +16,7 @@ public class Optimizer {
     public boolean renderDistanceOpt = false;    // Reduce to 6 chunks
     public boolean maxFpsOpt = false;            // Uncap FPS (260)
     public boolean vsyncOff = false;             // VSync off
-    public boolean smoothLightingOff = false;    // Smooth lighting off
+    // smoothLighting removed in 1.21.4
     public boolean particlesMin = false;         // Particles minimal
     public boolean entityShadowsOff = false;     // Entity shadows off
     public boolean viewBobbingOff = false;       // View bobbing off
@@ -44,7 +44,6 @@ public class Optimizer {
         new OptDef("vsync",        "VSync Off",             "Disable vertical sync for lower input latency", "high"),
         new OptDef("graphics",     "Fast Graphics",         "Switch to fast graphics mode",                  "high"),
         new OptDef("particles",    "Minimal Particles",     "Reduce particles to minimal",                   "med"),
-        new OptDef("smooth",       "Smooth Lighting Off",   "Disable smooth lighting for FPS gain",          "med"),
         new OptDef("shadows",      "Entity Shadows Off",    "Disable entity shadow rendering",               "med"),
         new OptDef("bobbing",      "View Bobbing Off",      "Disable view bobbing for stability",            "low"),
         new OptDef("render",       "PvP Render Distance",   "Set render distance to 6 chunks",               "high"),
@@ -72,7 +71,6 @@ public class Optimizer {
             case "vsync"      -> vsyncOff;
             case "graphics"   -> graphicsFast;
             case "particles"  -> particlesMin;
-            case "smooth"     -> smoothLightingOff;
             case "shadows"    -> entityShadowsOff;
             case "bobbing"    -> viewBobbingOff;
             case "render"     -> renderDistanceOpt;
@@ -121,10 +119,6 @@ public class Optimizer {
             case "particles" -> {
                 particlesMin = !particlesMin;
                 mc.options.getParticles().setValue(particlesMin ? ParticlesMode.MINIMAL : ParticlesMode.ALL);
-            }
-            case "smooth" -> {
-                smoothLightingOff = !smoothLightingOff;
-                mc.options.getSmoothLighting().setValue(!smoothLightingOff);
             }
             case "shadows" -> {
                 entityShadowsOff = !entityShadowsOff;
