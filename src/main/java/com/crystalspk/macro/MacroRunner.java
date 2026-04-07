@@ -3,6 +3,7 @@ package com.crystalspk.macro;
 import com.crystalspk.config.MacroConfig;
 import com.crystalspk.mixin.KeyBindingAccessor;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;   // ← This was missing!
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -142,10 +143,6 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor (UPDATED per your new code) ─────────────────────
-    // Exact sequence + timings you requested:
-    // switchSync → rightClick → sleep(20) → check
-    // switchSync → rightClick → sleep(40) → check
-    // switchSync → rightClick → sleep(50)
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
