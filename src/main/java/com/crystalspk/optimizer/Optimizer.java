@@ -253,4 +253,4 @@ public class Optimizer {
             if (isEnabled(d.id)) toggle(d.id);
         }
     }
-        }
+}
