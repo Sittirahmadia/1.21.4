@@ -3,6 +3,7 @@ package com.crystalspk.gui;
 import com.crystalspk.config.MacroConfig;
 import com.crystalspk.config.MacroDef;
 import com.crystalspk.macro.MacroEngine;
+import com.crystalspk.optimizer.Optimizer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -81,12 +82,13 @@ public class MacroScreen extends Screen {
     // Computed each frame
     private int sidebarX, contentX, contentW, contentTop, contentH;
 
-    private static final String[] CATEGORIES = {"crystal", "sword", "mace", "cart", "uhc"};
-    private static final String[] CAT_LABELS = {"Crystal", "Sword", "Mace", "Cart", "UHC"};
-    private static final String[] CAT_ICONS  = {"\u25C6", "\u2694", "\u2692", "\u26CF", "\u2665"};
+    private static final String[] CATEGORIES = {"crystal", "sword", "mace", "cart", "uhc", "optimizer"};
+    private static final String[] CAT_LABELS = {"Crystal", "Sword", "Mace", "Cart", "UHC", "Optimizer"};
+    private static final String[] CAT_ICONS  = {"\u25C6", "\u2694", "\u2692", "\u26CF", "\u2665", "\u26A1"};
     private static final String[] CAT_SUBS   = {
         "Anchor & crystal macros", "Sword & shield macros",
-        "Mace & elytra combos", "Minecart TNT macros", "Bucket & trap macros"
+        "Mace & elytra combos", "Minecart TNT macros", "Bucket & trap macros",
+        "Performance & input optimizations"
     };
 
     public MacroScreen() {
@@ -250,21 +252,90 @@ public class MacroScreen extends Screen {
         int cy = contentTop + PAD / 2 - (int) scrollY;
         int cardAreaW = contentW - PAD * 2 - 6;
 
-        for (MacroDef def : MacroDef.ALL) {
-            if (!def.category.equals(currentCategory)) continue;
-            MacroConfig.MacroEntry entry = cfg.macros.get(def.id);
-            if (entry == null) continue;
+        if ("optimizer".equals(currentCategory)) {
+            // ── Optimizer Page ───────────────────────────────────────────
+            Optimizer opt = Optimizer.get();
 
-            boolean expanded = def.id.equals(expandedMacro);
-            boolean isActive = entry.active;
-            int fieldCount = 3 + def.slotNames.size();
-            int cardH = expanded ? CARD_H + 4 + fieldCount * (FIELD_H + 4) + 4 : CARD_H;
+            // Apply All / Revert All buttons
+            int btnW = 80, btnH = 16;
+            int btnX = contentX + PAD;
+            // Apply All
+            boolean applyHov = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= cy && mouseY < cy + btnH;
+            ctx.fill(btnX, cy, btnX + btnW, cy + btnH, applyHov ? ACCENT_SOFT : CARD_BG);
+            drawBorder(ctx, btnX, cy, btnW, btnH, applyHov ? ACCENT : BORDER);
+            ctx.drawTextWithShadow(textRenderer, "Apply All", btnX + 10, cy + 4, ACCENT);
+            // Revert All
+            int revX = btnX + btnW + 6;
+            boolean revHov = mouseX >= revX && mouseX < revX + btnW && mouseY >= cy && mouseY < cy + btnH;
+            ctx.fill(revX, cy, revX + btnW, cy + btnH, revHov ? 0xFF2A1820 : CARD_BG);
+            drawBorder(ctx, revX, cy, btnW, btnH, revHov ? RED : BORDER);
+            ctx.drawTextWithShadow(textRenderer, "Revert All", revX + 8, cy + 4, RED);
+            // Status
+            int optCount = opt.countEnabled();
+            ctx.drawTextWithShadow(textRenderer, optCount + "/" + Optimizer.ALL_OPTS.length + " applied",
+                    revX + btnW + 12, cy + 4, optCount > 0 ? GREEN : TEXT_D);
+            cy += btnH + 8;
 
-            if (cy + cardH >= contentTop && cy <= contentTop + contentH) {
-                renderCard(ctx, def, entry, expanded, isActive,
-                           contentX + PAD, cy, cardAreaW, cardH, mouseX, mouseY);
+            // Optimizer cards
+            for (Optimizer.OptDef od : Optimizer.ALL_OPTS) {
+                boolean enabled = opt.isEnabled(od.id);
+                int oh = 28;
+
+                if (cy + oh >= contentTop && cy <= contentTop + contentH) {
+                    boolean rowHov = mouseX >= contentX + PAD && mouseX < contentX + PAD + cardAreaW &&
+                                     mouseY >= cy && mouseY < cy + oh;
+
+                    int bg = enabled ? CARD_ON : (rowHov ? CARD_HOV : CARD_BG);
+                    ctx.fill(contentX + PAD, cy, contentX + PAD + cardAreaW, cy + oh, bg);
+                    drawBorder(ctx, contentX + PAD, cy, cardAreaW, oh, enabled ? CARD_BORDER_ON : CARD_BORDER);
+
+                    // Active glow
+                    if (enabled) {
+                        for (int i = 0; i < 40; i++) {
+                            int a = 30 - i * 30 / 40;
+                            if (a > 0) ctx.fill(contentX + PAD + 4 + i, cy + 1, contentX + PAD + 5 + i, cy + 2, (a << 24) | 0x4FC8FF);
+                        }
+                    }
+
+                    // Toggle
+                    int togX = contentX + PAD + 6;
+                    int togY = cy + 7;
+                    drawToggle(ctx, togX, togY, enabled, mouseX, mouseY);
+
+                    // Name
+                    ctx.drawTextWithShadow(textRenderer, od.name, togX + 32, cy + 5, TEXT_W);
+
+                    // Description
+                    ctx.drawTextWithShadow(textRenderer, od.desc, togX + 32, cy + 16, TEXT_D);
+
+                    // Impact badge
+                    int impactCol = "high".equals(od.impact) ? ACCENT : ("med".equals(od.impact) ? YELLOW : TEXT_D);
+                    String impactText = od.impact.toUpperCase();
+                    int impW = textRenderer.getWidth(impactText) + 8;
+                    int impX = contentX + PAD + cardAreaW - impW - 8;
+                    ctx.fill(impX, cy + 8, impX + impW, cy + 20, 0xFF141828);
+                    ctx.drawTextWithShadow(textRenderer, impactText, impX + 4, cy + 10, impactCol);
+                }
+                cy += oh + 3;
             }
-            cy += cardH + CARD_GAP;
+        } else {
+            // ── Macro Cards ─────────────────────────────────────────────
+            for (MacroDef def : MacroDef.ALL) {
+                if (!def.category.equals(currentCategory)) continue;
+                MacroConfig.MacroEntry entry = cfg.macros.get(def.id);
+                if (entry == null) continue;
+
+                boolean expanded = def.id.equals(expandedMacro);
+                boolean isActive = entry.active;
+                int fieldCount = 3 + def.slotNames.size();
+                int cardH = expanded ? CARD_H + 4 + fieldCount * (FIELD_H + 4) + 4 : CARD_H;
+
+                if (cy + cardH >= contentTop && cy <= contentTop + contentH) {
+                    renderCard(ctx, def, entry, expanded, isActive,
+                               contentX + PAD, cy, cardAreaW, cardH, mouseX, mouseY);
+                }
+                cy += cardH + CARD_GAP;
+            }
         }
 
         ctx.disableScissor();
@@ -446,6 +517,9 @@ public class MacroScreen extends Screen {
     // ═══════════════════════════════════════════════════════════════════
 
     private int calcContentHeight() {
+        if ("optimizer".equals(currentCategory)) {
+            return 16 + 8 + Optimizer.ALL_OPTS.length * (28 + 3) + PAD;
+        }
         int total = 0;
         for (MacroDef def : MacroDef.ALL) {
             if (!def.category.equals(currentCategory)) continue;
@@ -517,8 +591,39 @@ public class MacroScreen extends Screen {
             }
         }
 
-        // ── Card clicks ─────────────────────────────────────────────────
+        // ── Content clicks ───────────────────────────────────────────────
         if (mouseX < contentX) return true; // clicked sidebar, handled above
+
+        // Optimizer page clicks
+        if ("optimizer".equals(currentCategory)) {
+            Optimizer opt = Optimizer.get();
+            int cx = contentX + PAD;
+            int cy = contentTop + PAD / 2 - (int) scrollY;
+            int cw = contentW - PAD * 2 - 6;
+
+            // Apply All button
+            int btnW = 80, btnH = 16;
+            if (mouseX >= cx && mouseX < cx + btnW && mouseY >= cy && mouseY < cy + btnH) {
+                opt.applyAll(); return true;
+            }
+            // Revert All button
+            int revX = cx + btnW + 6;
+            if (mouseX >= revX && mouseX < revX + btnW && mouseY >= cy && mouseY < cy + btnH) {
+                opt.revertAll(); return true;
+            }
+            cy += btnH + 8;
+
+            // Individual optimizer toggles
+            for (Optimizer.OptDef od : Optimizer.ALL_OPTS) {
+                int oh = 28;
+                if (mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + oh) {
+                    opt.toggle(od.id);
+                    return true;
+                }
+                cy += oh + 3;
+            }
+            return true;
+        }
 
         MacroConfig cfg = MacroConfig.get();
         int cx = contentX + PAD;
