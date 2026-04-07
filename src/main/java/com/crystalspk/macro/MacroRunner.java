@@ -3,9 +3,7 @@ package com.crystalspk.macro;
 import com.crystalspk.config.MacroConfig;
 import com.crystalspk.mixin.KeyBindingAccessor;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
 
-import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
@@ -46,21 +44,11 @@ public class MacroRunner {
     }
 
     // ── Timing Constants ─────────────────────────────────────────────────
-    // SWITCH_GAP: time from switchSlot() call to rightClick() call.
-    // MUST be >= 80ms for proper slot change processing.
-    // (MC render thread updates inventory async, need buffer)
     private static final int SWITCH_GAP = 90;
-
-    // STEP_GAP: time between a click and next action.
-    // Ensures MC processes the action before next step.
     private static final int STEP_GAP = 55;
 
     // ── Input helpers ────────────────────────────────────────────────────
 
-    /**
-     * ASYNC slot switch (queues on render thread).
-     * Used by macros that don't need immediate confirmation.
-     */
     private static void switchSlot(int slot) {
         if (slot < 0 || slot > 8) return;
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -69,29 +57,21 @@ public class MacroRunner {
         });
     }
 
-    /**
-     * SYNCHRONOUS slot switch — waits until slot is actually selected.
-     * Polls selectedSlot until it matches the target (with 300ms timeout).
-     * Used by SA, DA, and slotThen* helper methods.
-     */
     private static void switchSlotSync(int slot) throws InterruptedException {
         if (slot < 0 || slot > 8) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         
-        // Queue the slot switch on render thread
         mc.execute(() -> {
             if (mc.player != null) mc.player.getInventory().selectedSlot = slot;
         });
         
-        // Wait for slot to actually change (poll every 2ms, max 300ms)
         long startTime = System.currentTimeMillis();
         while (System.currentTimeMillis() - startTime < 300) {
             if (mc.player != null && mc.player.getInventory().selectedSlot == slot) {
-                return; // Slot is confirmed selected
+                return;
             }
             Thread.sleep(2);
         }
-        // Timeout fallback — at least sleep 100ms more
         Thread.sleep(100);
     }
 
@@ -113,18 +93,11 @@ public class MacroRunner {
         });
     }
 
-    /**
-     * Slot-switch then right-click with SYNCHRONOUS switching.
-     * Uses switchSlotSync to guarantee slot is selected before click.
-     */
     private static void slotThenRightClick(int slot) throws InterruptedException {
         switchSlotSync(slot);
         rightClick();
     }
 
-    /**
-     * Slot-switch then left-click with SYNCHRONOUS switching.
-     */
     private static void slotThenLeftClick(int slot) throws InterruptedException {
         switchSlotSync(slot);
         leftClick();
@@ -168,77 +141,64 @@ public class MacroRunner {
         }
     }
 
-    // ── SA — Single Anchor ───────────────────────────────────────────────
-    // Uses SYNCHRONOUS slot switching to guarantee correct item placement order.
+    // ── SA — Single Anchor (UPDATED per your new code) ─────────────────────
+    // Exact sequence + timings you requested:
+    // switchSync → rightClick → sleep(20) → check
+    // switchSync → rightClick → sleep(40) → check
+    // switchSync → rightClick → sleep(50)
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. anchor → place anchor (WAIT for slot confirmation)
         switchSlotSync(anchor);
         rightClick();
         sleep(20); if (!check()) return;
 
-        // 2. glowstone → charge anchor (WAIT for slot confirmation)
         switchSlotSync(glowstone);
         rightClick();
-        sleep(30); if (!check()) return;
+        sleep(40); if (!check()) return;
 
-        // 3. det/anchor → explode (right-click charged anchor) (WAIT for slot confirmation)
         switchSlotSync(det);
         rightClick();
+        sleep(50); if (!check()) return;
     }
 
     // ── DA — Double Anchor ───────────────────────────────────────────────
-    // Correct sequence (user-verified):
-    // 1. anchor  → place 1st anchor
-    // 2. glowstone → charge 1st anchor
-    // 3. anchor  → explode 1st (right-clicking charged anchor = explode)
-    // 4. anchor  → place 2nd anchor IMMEDIATELY (no slot switch, ASAP in air)
-    // 5. glowstone → charge 2nd anchor
-    // 6. anchor/det → explode 2nd
-    // Uses SYNCHRONOUS slot switching to guarantee correct order.
-    
-private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
-    int anchor = getSlot(e, "anchorSlot");
-    int glowstone = getSlot(e, "glowstoneSlot");
-    int explode = getSlot(e, "explodeSlot");
-    int det = explode >= 0 ? explode : anchor;
+    private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
+        int anchor = getSlot(e, "anchorSlot");
+        int glowstone = getSlot(e, "glowstoneSlot");
+        int explode = getSlot(e, "explodeSlot");
+        int det = explode >= 0 ? explode : anchor;
 
-    // === FIRST ANCHOR ===
-    // 1. anchor → place 1st anchor
-    switchSlotSync(anchor);
-    rightClick();
-    sleep(30); if (!check()) return;       // 30ms
+        // === FIRST ANCHOR ===
+        switchSlotSync(anchor);
+        rightClick();
+        sleep(30); if (!check()) return;
 
-    // 2. glowstone → charge 1st anchor
-    switchSlotSync(glowstone);
-    rightClick();
-    sleep(40); if (!check()) return;       // 40ms
+        switchSlotSync(glowstone);
+        rightClick();
+        sleep(40); if (!check()) return;
 
-    // 3. anchor → explode 1st anchor
-    switchSlotSync(anchor);
-    rightClick();
-    sleep(45); if (!check()) return;       // 45ms
+        switchSlotSync(anchor);
+        rightClick();
+        sleep(45); if (!check()) return;
 
-    // 4. anchor still selected → place 2nd anchor IMMEDIATELY (minimal delay, e.g. 10ms)
-    sleep(10); // Fast – reduced from 12 or 50
-    rightClick();
-    sleep(50); if (!check()) return;       // 50ms after 2nd place (prepare for next phase)
+        sleep(10);
+        rightClick();
+        sleep(50); if (!check()) return;
 
-    // === SECOND ANCHOR ===
-    // 5. glowstone → charge 2nd anchor
-    switchSlotSync(glowstone);
-    rightClick();
-    sleep(55); if (!check()) return;       // 55ms
+        // === SECOND ANCHOR ===
+        switchSlotSync(glowstone);
+        rightClick();
+        sleep(55); if (!check()) return;
 
-    // 6. det/anchor → explode 2nd anchor
-    switchSlotSync(det);
-    rightClick();
-    sleep(65);                             // 65ms stabilization (optional, could move or remove)
-}
+        switchSlotSync(det);
+        rightClick();
+        sleep(65);
+    }
+
     // ── AP — Anchor Pearl ────────────────────────────────────────────────
     private static void runAP(MacroConfig.MacroEntry e) throws InterruptedException {
         int stepGap = Math.max(STEP_GAP, e.delay);
@@ -248,7 +208,6 @@ private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException 
         int pearl = getSlot(e, "pearlSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // SA sequence
         slotThenRightClick(anchor);
         sleep(stepGap); if (!check()) return;
         slotThenRightClick(glowstone);
@@ -256,7 +215,6 @@ private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException 
         slotThenRightClick(det);
         sleep(stepGap); if (!check()) return;
 
-        // Pearl throw
         slotThenRightClick(pearl);
     }
 
@@ -267,15 +225,12 @@ private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException 
         int obsidian = getSlot(e, "obsidianSlot");
         int crystal = getSlot(e, "crystalSlot");
 
-        // 1. Place obsidian
         slotThenRightClick(obsidian);
         sleep(stepGap); if (!check()) return;
 
-        // 2. Switch to crystal
         switchSlot(crystal);
         sleep(SWITCH_GAP); if (!check()) return;
 
-        // 3. Place crystal → hit → place → hit
         rightClick(); sleep(fastGap); if (!check()) return;
         leftClick();  sleep(fastGap); if (!check()) return;
         rightClick(); sleep(fastGap); if (!check()) return;
@@ -470,11 +425,11 @@ private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException 
         int lava = getSlot(e, "lavaSlot");
         int cobweb = getSlot(e, "cobwebSlot");
 
-        slotThenRightClick(lava);       // place lava
+        slotThenRightClick(lava);
         sleep(stepGap); if (!check()) return;
-        rightClick();                    // pick lava back up
+        rightClick();
         sleep(stepGap); if (!check()) return;
-        slotThenRightClick(cobweb);      // place cobweb
+        slotThenRightClick(cobweb);
     }
 
     // ── LA — Lava ────────────────────────────────────────────────────────
@@ -507,4 +462,4 @@ private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException 
             }
         } catch (InterruptedException ignored) {}
     }
-}
+            }
