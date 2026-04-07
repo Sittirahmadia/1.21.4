@@ -101,22 +101,19 @@ public class MacroRunner {
     }
 
     /**
-     * Slot-switch then right-click with proper timing.
-     * Critical: Must wait for slot switch to be fully processed BEFORE click.
-     * Use long sleep (80ms) to ensure MC renders the slot change before click fires.
+     * Slot-switch then right-click with SYNCHRONOUS switching.
+     * Uses switchSlotSync to guarantee slot is selected before click.
      */
     private static void slotThenRightClick(int slot) throws InterruptedException {
-        switchSlot(slot);
-        sleep(80); // 80ms = well over 1+ MC ticks, guarantees slot change visible
+        switchSlotSync(slot);
         rightClick();
     }
 
     /**
-     * Slot-switch then left-click with proper timing.
+     * Slot-switch then left-click with SYNCHRONOUS switching.
      */
     private static void slotThenLeftClick(int slot) throws InterruptedException {
-        switchSlot(slot);
-        sleep(80); // 80ms = well over 1+ MC ticks
+        switchSlotSync(slot);
         leftClick();
     }
 
