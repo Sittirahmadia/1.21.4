@@ -46,13 +46,13 @@ public class MacroRunner {
     }
 
     // ── Timing Constants ─────────────────────────────────────────────────
-    // SWITCH_GAP: time between slot switch and the click that follows.
-    // Must be >= 55ms (just over 1 MC tick = 50ms) so the slot change
-    // is processed before the click fires.
-    private static final int SWITCH_GAP = 55;
+    // SWITCH_GAP: time from switchSlot() call to rightClick() call.
+    // MUST be >= 80ms for proper slot change processing.
+    // (MC render thread updates inventory async, need buffer)
+    private static final int SWITCH_GAP = 80;
 
-    // STEP_GAP: minimum time between a click and the next slot switch.
-    // Ensures MC processes the click before we switch away.
+    // STEP_GAP: time between a click and next action.
+    // Ensures MC processes the action before next step.
     private static final int STEP_GAP = 40;
 
     // ── Input helpers ────────────────────────────────────────────────────
@@ -84,21 +84,22 @@ public class MacroRunner {
     }
 
     /**
-     * Split slot-switch + right-click: switch slot, wait SWITCH_GAP, then click.
-     * This guarantees the slot is registered in MC before the click fires.
+     * Slot-switch then right-click with proper timing.
+     * Critical: Must wait for slot switch to be fully processed BEFORE click.
+     * Use long sleep (80ms) to ensure MC renders the slot change before click fires.
      */
     private static void slotThenRightClick(int slot) throws InterruptedException {
         switchSlot(slot);
-        sleep(SWITCH_GAP);
+        sleep(80); // 80ms = well over 1+ MC ticks, guarantees slot change visible
         rightClick();
     }
 
     /**
-     * Split slot-switch + left-click.
+     * Slot-switch then left-click with proper timing.
      */
     private static void slotThenLeftClick(int slot) throws InterruptedException {
         switchSlot(slot);
-        sleep(SWITCH_GAP);
+        sleep(80); // 80ms = well over 1+ MC ticks
         leftClick();
     }
 
@@ -141,8 +142,8 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // All sleeps >= 55ms (> 1 MC tick = 50ms) so slot change is committed
-    // before the right-click fires. Prevents glowstone-before-anchor bug.
+    // CRITICAL: use 80ms between switchSlot and click to guarantee slot change
+    // is fully processed by MC before the action fires.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
@@ -151,19 +152,19 @@ public class MacroRunner {
 
         // 1. anchor → place anchor
         switchSlot(anchor);
-        sleep(55);
+        sleep(80); // Wait for slot change to register
         rightClick();
         sleep(40); if (!check()) return;
 
         // 2. glowstone → charge anchor
         switchSlot(glowstone);
-        sleep(55);
+        sleep(80); // Wait for slot change to register
         rightClick();
         sleep(40); if (!check()) return;
 
         // 3. det/anchor → explode (right-click charged anchor)
         switchSlot(det);
-        sleep(55);
+        sleep(80); // Wait for slot change to register
         rightClick();
     }
 
@@ -175,7 +176,7 @@ public class MacroRunner {
     // 4. anchor  → place 2nd anchor IMMEDIATELY (no slot switch, ASAP in air)
     // 5. glowstone → charge 2nd anchor
     // 6. anchor/det → explode 2nd
-    // All slot-to-click gaps >= 55ms (> 1 MC tick) to prevent wrong-item-placed bug.
+    // CRITICAL: All slot-to-click gaps = 80ms (not 55ms) to prevent glowstone-first bug.
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
@@ -185,19 +186,19 @@ public class MacroRunner {
         // === FIRST ANCHOR ===
         // 1. anchor → place 1st anchor
         switchSlot(anchor);
-        sleep(55);
+        sleep(80); // CRITICAL: 80ms to ensure anchor slot is selected
         rightClick();
         sleep(40); if (!check()) return;
 
         // 2. glowstone → charge 1st anchor
         switchSlot(glowstone);
-        sleep(55);
+        sleep(80); // CRITICAL: 80ms to ensure glowstone slot is selected
         rightClick();
         sleep(40); if (!check()) return;
 
         // 3. anchor → explode 1st anchor (right-clicking a charged anchor = explode)
         switchSlot(anchor);
-        sleep(55);
+        sleep(80); // CRITICAL: 80ms to ensure anchor slot is selected for explode
         rightClick();
         if (!check()) return;
 
@@ -210,13 +211,13 @@ public class MacroRunner {
         // === SECOND ANCHOR ===
         // 5. glowstone → charge 2nd anchor
         switchSlot(glowstone);
-        sleep(55);
+        sleep(80); // CRITICAL: 80ms to ensure glowstone slot is selected
         rightClick();
         sleep(40); if (!check()) return;
 
         // 6. det/anchor → explode 2nd anchor
         switchSlot(det);
-        sleep(55);
+        sleep(80); // CRITICAL: 80ms to ensure det slot is selected
         rightClick();
     }
 
