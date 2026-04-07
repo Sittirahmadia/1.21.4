@@ -149,20 +149,20 @@ public class MacroRunner {
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // Place anchor
+        // Place anchor - wait for server registration
         switchSlotSync(anchor);
         rightClick();
-        sleep(50); if (!check()) return;
+        sleep(120); if (!check()) return;
 
-        // Place glowstone
+        // Place glowstone on anchor
         switchSlotSync(glowstone);
         rightClick();
-        sleep(50); if (!check()) return;
+        sleep(100); if (!check()) return;
 
         // Explode
         switchSlotSync(det);
         rightClick();
-        sleep(60); if (!check()) return;
+        sleep(100); if (!check()) return;
     }
 
     // ── DA — Double Anchor: anchor → glowstone → anchor (2x click) → explode → glowstone → explode
