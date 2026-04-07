@@ -11,10 +11,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BooleanSupplier;
 
 /**
- * All macro implementations matching the AHK source exactly.
- * Each macro runs on a worker thread and uses Thread.sleep for timing.
- * Slot switching is done via MinecraftClient.getInstance().player.getInventory().selectedSlot.
- * Clicks are simulated by pressing the MC attack/use keybindings.
+ * Macro implementations using split slot-switch + click pattern.
+ * Each step is: switchSlot() → sleep(SWITCH_GAP) → click() → sleep(STEP_GAP)
+ * This ensures the slot change is processed in one game tick before the click fires
+ * in the next tick — preventing wrong-item-placed bugs at any delay setting.
  */
 public class MacroRunner {
     private static final ConcurrentHashMap<String, AtomicBoolean> running = new ConcurrentHashMap<>();
@@ -40,11 +40,17 @@ public class MacroRunner {
         if (ms > 0) Thread.sleep(ms);
     }
 
-    // ── Input helpers (run on render thread via execute) ──────────────────
+    // ── Timing Constants ─────────────────────────────────────────────────
+    // SWITCH_GAP: time between slot switch and the click that follows.
+    // Must be >= 55ms (just over 1 MC tick = 50ms) so the slot change
+    // is processed before the click fires.
+    private static final int SWITCH_GAP = 55;
 
-    // Minimum delay between steps — one MC tick = 50ms.
-    // Without this, slot switches can be missed because mc.execute() is async.
-    private static final int MIN_STEP_MS = 50;
+    // STEP_GAP: minimum time between a click and the next slot switch.
+    // Ensures MC processes the click before we switch away.
+    private static final int STEP_GAP = 40;
+
+    // ── Input helpers ────────────────────────────────────────────────────
 
     private static void switchSlot(int slot) {
         if (slot < 0 || slot > 8) return;
@@ -73,35 +79,22 @@ public class MacroRunner {
     }
 
     /**
-     * Atomic slot switch + right-click in ONE mc.execute() call.
-     * This guarantees the slot is changed BEFORE the click fires,
-     * both within the same game tick — no race condition possible.
+     * Split slot-switch + right-click: switch slot, wait SWITCH_GAP, then click.
+     * This guarantees the slot is registered in MC before the click fires.
      */
-    private static void switchSlotAndRightClick(int slot) {
-        if (slot < 0 || slot > 8) return;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        mc.execute(() -> {
-            if (mc.player == null) return;
-            mc.player.getInventory().selectedSlot = slot;
-            KeyBinding useKey = mc.options.useKey;
-            KeyBindingAccessor acc = (KeyBindingAccessor) useKey;
-            acc.setTimesPressed(acc.getTimesPressed() + 1);
-        });
+    private static void slotThenRightClick(int slot) throws InterruptedException {
+        switchSlot(slot);
+        sleep(SWITCH_GAP);
+        rightClick();
     }
 
     /**
-     * Atomic slot switch + left-click in ONE mc.execute() call.
+     * Split slot-switch + left-click.
      */
-    private static void switchSlotAndLeftClick(int slot) {
-        if (slot < 0 || slot > 8) return;
-        MinecraftClient mc = MinecraftClient.getInstance();
-        mc.execute(() -> {
-            if (mc.player == null) return;
-            mc.player.getInventory().selectedSlot = slot;
-            KeyBinding attackKey = mc.options.attackKey;
-            KeyBindingAccessor acc = (KeyBindingAccessor) attackKey;
-            acc.setTimesPressed(acc.getTimesPressed() + 1);
-        });
+    private static void slotThenLeftClick(int slot) throws InterruptedException {
+        switchSlot(slot);
+        sleep(SWITCH_GAP);
+        leftClick();
     }
 
     private static int getSlot(MacroConfig.MacroEntry entry, String name) {
@@ -112,7 +105,7 @@ public class MacroRunner {
 
     public static void dispatch(String id, MacroConfig.MacroEntry entry) {
         AtomicBoolean flag = new AtomicBoolean(true);
-        if (running.putIfAbsent(id, flag) != null) return; // already running
+        if (running.putIfAbsent(id, flag) != null) return;
 
         try {
             switch (id) {
@@ -143,341 +136,312 @@ public class MacroRunner {
     }
 
     // ── SA — Single Anchor ───────────────────────────────────────────────
-    // Sequence: anchor+rclick → glowstone+rclick (1 charge) → detonate+rclick
+    // Split pattern: switchSlot → 55ms → rClick → stepGap → next
+    // Guarantees anchor slot is active before place click fires.
     private static void runSA(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // 1. Place anchor
-        switchSlotAndRightClick(anchor);
-        sleep(d); if (!check()) return;
+        // 1. Switch to anchor → wait → place
+        slotThenRightClick(anchor);
+        sleep(stepGap); if (!check()) return;
 
-        // 2. Charge with glowstone (single charge)
-        switchSlotAndRightClick(glowstone);
-        sleep(d); if (!check()) return;
+        // 2. Switch to glowstone → wait → charge
+        slotThenRightClick(glowstone);
+        sleep(stepGap); if (!check()) return;
 
-        // 3. Detonate
-        switchSlotAndRightClick(det);
+        // 3. Switch to detonate → wait → explode
+        slotThenRightClick(det);
     }
 
-    // ── DA — Double Anchor ─────────────────────────────────────────────
-    // Sequence: anchor→glowstone→explode(detonate 1st) →
-    //           anchor(place 2nd at explosion spot)→glowstone→explode(detonate 2nd)
+    // ── DA — Double Anchor ───────────────────────────────────────────────
+    // 1. anchor → rclick (place 1st)
+    // 2. glowstone → rclick (charge 1st)
+    // 3. anchor → rclick (detonate 1st — rclick on charged anchor = explode)
+    // 4. rclick immediately (place 2nd at blast spot — still on anchor slot)
+    // 5. glowstone → rclick (charge 2nd)
+    // 6. explode → rclick (detonate 2nd)
     private static void runDA(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // === First anchor: place → charge → detonate ===
-        switchSlotAndRightClick(anchor);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(glowstone);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(det);
-        sleep(d); if (!check()) return;
+        // 1. Switch to anchor → wait → place anchor
+        slotThenRightClick(anchor);
+        sleep(stepGap); if (!check()) return;
 
-        // === Second anchor: place at explosion spot → charge → detonate ===
-        switchSlotAndRightClick(anchor);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(glowstone);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(det);
+        // 2. Switch to glowstone → wait → charge anchor
+        slotThenRightClick(glowstone);
+        sleep(stepGap); if (!check()) return;
+
+        // 3. Switch to anchor → wait → detonate 1st (rclick on charged anchor)
+        slotThenRightClick(anchor);
+        // Short gap — stay on anchor slot for immediate 2nd placement
+        sleep(20); if (!check()) return;
+
+        // 4. rClick immediately — places 2nd anchor at blast spot (already on anchor)
+        rightClick();
+        sleep(stepGap); if (!check()) return;
+
+        // 5. Switch to glowstone → wait → charge 2nd anchor
+        slotThenRightClick(glowstone);
+        sleep(stepGap); if (!check()) return;
+
+        // 6. Switch to explode slot → wait → detonate 2nd
+        slotThenRightClick(det);
     }
 
-    // ── AP — Anchor Pearl (matches ap.ahk) ──────────────────────────────
-    // Full SA cycle then immediately pearl throw
+    // ── AP — Anchor Pearl ────────────────────────────────────────────────
     private static void runAP(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int anchor = getSlot(e, "anchorSlot");
         int glowstone = getSlot(e, "glowstoneSlot");
         int explode = getSlot(e, "explodeSlot");
         int pearl = getSlot(e, "pearlSlot");
         int det = explode >= 0 ? explode : anchor;
 
-        // SA cycle (1 charge)
-        switchSlotAndRightClick(anchor);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(glowstone);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(det);
-        sleep(d); if (!check()) return;
+        // SA sequence
+        slotThenRightClick(anchor);
+        sleep(stepGap); if (!check()) return;
+        slotThenRightClick(glowstone);
+        sleep(stepGap); if (!check()) return;
+        slotThenRightClick(det);
+        sleep(stepGap); if (!check()) return;
 
         // Pearl throw
-        switchSlotAndRightClick(pearl);
+        slotThenRightClick(pearl);
     }
 
-    // ── HC — Hit Crystal (Fast) ─────────────────────────────────────────
-    // obsidian → rclick → crystal → rclick → lclick → rclick → lclick
-    // After initial placement, fast place-hit-place-hit loop
+    // ── HC — Hit Crystal ─────────────────────────────────────────────────
     private static void runHC(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
-        int fastD = Math.max(MIN_STEP_MS, d / 2); // faster for hit-place loop
+        int stepGap = Math.max(STEP_GAP, e.delay);
+        int fastGap = Math.max(STEP_GAP, stepGap / 2);
         int obsidian = getSlot(e, "obsidianSlot");
         int crystal = getSlot(e, "crystalSlot");
 
-        // 1. Switch to obsidian + place
-        switchSlotAndRightClick(obsidian);
-        sleep(d); if (!check()) return;
+        // 1. Place obsidian
+        slotThenRightClick(obsidian);
+        sleep(stepGap); if (!check()) return;
 
         // 2. Switch to crystal
         switchSlot(crystal);
-        sleep(d); if (!check()) return;
+        sleep(SWITCH_GAP); if (!check()) return;
 
-        // 3. Place crystal
-        rightClick();
-        sleep(fastD); if (!check()) return;
-
-        // 4. Hit crystal (left click)
-        leftClick();
-        sleep(fastD); if (!check()) return;
-
-        // 5. Place another crystal immediately
-        rightClick();
-        sleep(fastD); if (!check()) return;
-
-        // 6. Hit again
+        // 3. Place crystal → hit → place → hit
+        rightClick(); sleep(fastGap); if (!check()) return;
+        leftClick();  sleep(fastGap); if (!check()) return;
+        rightClick(); sleep(fastGap); if (!check()) return;
         leftClick();
     }
 
-    // ── KP — Key Pearl (matches kp.ahk) ─────────────────────────────────
+    // ── KP — Key Pearl ───────────────────────────────────────────────────
     private static void runKP(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int pearl = getSlot(e, "pearlSlot");
         int ret = getSlot(e, "returnSlot");
 
-        switchSlotAndRightClick(pearl);
-        sleep(d); if (!check()) return;
+        slotThenRightClick(pearl);
+        sleep(stepGap); if (!check()) return;
         switchSlot(ret);
     }
 
-    // ── IDH — Inventory D-Hand (matches idh.ahk) ────────────────────────
-    // totem slot → swap to offhand → open inventory
+    // ── IDH — Inventory D-Hand ───────────────────────────────────────────
     private static void runIDH(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int totem = getSlot(e, "totemSlot");
         int swap = getSlot(e, "swapSlot");
 
-        switchSlot(totem); sleep(d); if (!check()) return;
+        switchSlot(totem);
+        sleep(SWITCH_GAP); if (!check()) return;
 
-        // Swap to offhand (press F key equivalent)
         if (swap >= 0) {
             MinecraftClient mc = MinecraftClient.getInstance();
             mc.execute(() -> {
                 if (mc.player != null) {
-                    KeyBinding swapKey = mc.options.swapHandsKey;
-                    KeyBindingAccessor acc = (KeyBindingAccessor) swapKey;
+                    KeyBindingAccessor acc = (KeyBindingAccessor) mc.options.swapHandsKey;
                     acc.setTimesPressed(acc.getTimesPressed() + 1);
                 }
             });
-            sleep(d); if (!check()) return;
+            sleep(stepGap); if (!check()) return;
         }
 
-        // Open inventory
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.execute(() -> {
             if (mc.player != null) {
-                KeyBinding invKey = mc.options.inventoryKey;
-                KeyBindingAccessor acc = (KeyBindingAccessor) invKey;
+                KeyBindingAccessor acc = (KeyBindingAccessor) mc.options.inventoryKey;
                 acc.setTimesPressed(acc.getTimesPressed() + 1);
             }
         });
     }
 
-    // ── OHT — Offhand Totem (matches oht.ahk) ──────────────────────────
+    // ── OHT — Offhand Totem ──────────────────────────────────────────────
     private static void runOHT(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int totem = getSlot(e, "totemSlot");
 
-        sleep(30);
-        switchSlot(totem); sleep(d); if (!check()) return;
+        switchSlot(totem);
+        sleep(SWITCH_GAP); if (!check()) return;
 
-        // Swap to offhand
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.execute(() -> {
             if (mc.player != null) {
-                KeyBinding swapKey = mc.options.swapHandsKey;
-                KeyBindingAccessor acc = (KeyBindingAccessor) swapKey;
+                KeyBindingAccessor acc = (KeyBindingAccessor) mc.options.swapHandsKey;
                 acc.setTimesPressed(acc.getTimesPressed() + 1);
             }
         });
     }
 
-    // ── ASB — Auto Shield Breaker (matches asb.ahk) ─────────────────────
+    // ── ASB — Auto Shield Breaker ────────────────────────────────────────
     private static void runASB(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int axe = getSlot(e, "axeSlot");
         int sword = getSlot(e, "swordSlot");
 
-        sleep(30);
-        switchSlotAndLeftClick(axe);
-        sleep(d); if (!check()) return;
+        slotThenLeftClick(axe);
+        sleep(stepGap); if (!check()) return;
         switchSlot(sword);
     }
 
-    // ── SR — Sprint Reset (matches sr.ahk) ──────────────────────────────
-    // left-click → double W tap
+    // ── SR — Sprint Reset ────────────────────────────────────────────────
     private static void runSR(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
 
-        leftClick(); sleep(d); if (!check()) return;
+        leftClick();
+        sleep(stepGap); if (!check()) return;
 
         MinecraftClient mc = MinecraftClient.getInstance();
-        // Double W tap for sprint reset
-        mc.execute(() -> {
-            KeyBinding fwd = mc.options.forwardKey;
-            KeyBindingAccessor acc = (KeyBindingAccessor) fwd;
-            acc.setPressed(true);
-        });
+        mc.execute(() -> ((KeyBindingAccessor) mc.options.forwardKey).setPressed(true));
         sleep(15); if (!check()) return;
-        mc.execute(() -> {
-            KeyBinding fwd = mc.options.forwardKey;
-            ((KeyBindingAccessor) fwd).setPressed(false);
-        });
+        mc.execute(() -> ((KeyBindingAccessor) mc.options.forwardKey).setPressed(false));
         sleep(15); if (!check()) return;
-        mc.execute(() -> {
-            KeyBinding fwd = mc.options.forwardKey;
-            ((KeyBindingAccessor) fwd).setPressed(true);
-        });
+        mc.execute(() -> ((KeyBindingAccessor) mc.options.forwardKey).setPressed(true));
         sleep(15); if (!check()) return;
-        mc.execute(() -> {
-            KeyBinding fwd = mc.options.forwardKey;
-            ((KeyBindingAccessor) fwd).setPressed(false);
-        });
+        mc.execute(() -> ((KeyBindingAccessor) mc.options.forwardKey).setPressed(false));
     }
 
-    // ── LS — Lunge Swap ─────────────────────────────────────────────────
+    // ── LS — Lunge Swap ──────────────────────────────────────────────────
     private static void runLS(MacroConfig.MacroEntry e) throws InterruptedException {
         int sword = getSlot(e, "swordSlot");
         int spear = getSlot(e, "spearSlot");
 
-        switchSlot(sword); sleep(MIN_STEP_MS); if (!check()) return;
-        switchSlotAndLeftClick(spear);
-        sleep(MIN_STEP_MS); if (!check()) return;
+        switchSlot(sword);
+        sleep(SWITCH_GAP); if (!check()) return;
+        slotThenLeftClick(spear);
+        sleep(SWITCH_GAP); if (!check()) return;
         switchSlot(sword);
     }
 
-    // ── ES — Elytra Swap ────────────────────────────────────────────────
+    // ── ES — Elytra Swap ─────────────────────────────────────────────────
     private static void runES(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int elytra = getSlot(e, "elytraSlot");
         int ret = getSlot(e, "returnSlot");
 
-        sleep(30);
-        switchSlotAndRightClick(elytra);
-        sleep(d); if (!check()) return;
+        slotThenRightClick(elytra);
+        sleep(stepGap); if (!check()) return;
         switchSlot(ret);
     }
 
-    // ── PC — Pearl Catch ────────────────────────────────────────────────
+    // ── PC — Pearl Catch ─────────────────────────────────────────────────
     private static void runPC(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int pearl = getSlot(e, "pearlSlot");
         int wind = getSlot(e, "windChargeSlot");
 
-        sleep(30);
-        switchSlotAndRightClick(pearl);
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(wind);
+        slotThenRightClick(pearl);
+        sleep(stepGap); if (!check()) return;
+        slotThenRightClick(wind);
     }
 
-    // ── SS — Stun Slam ──────────────────────────────────────────────────
+    // ── SS — Stun Slam ───────────────────────────────────────────────────
     private static void runSS(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int axe = getSlot(e, "axeSlot");
         int mace = getSlot(e, "maceSlot");
 
-        sleep(30);
-        switchSlotAndLeftClick(axe);
-        sleep(d); if (!check()) return;
-        switchSlotAndLeftClick(mace);
+        slotThenLeftClick(axe);
+        sleep(stepGap); if (!check()) return;
+        slotThenLeftClick(mace);
     }
 
-    // ── BS — Breach Swap ────────────────────────────────────────────────
+    // ── BS — Breach Swap ─────────────────────────────────────────────────
     private static void runBS(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int mace = getSlot(e, "maceSlot");
         int sword = getSlot(e, "swordSlot");
 
-        sleep(30);
-        switchSlotAndLeftClick(mace);
-        sleep(d); if (!check()) return;
+        slotThenLeftClick(mace);
+        sleep(stepGap); if (!check()) return;
         switchSlot(sword);
     }
 
-    // ── IC — Insta Cart ─────────────────────────────────────────────────
+    // ── IC — Insta Cart ──────────────────────────────────────────────────
     private static void runIC(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int rail = getSlot(e, "railSlot");
         int bow = getSlot(e, "bowSlot");
         int cart = getSlot(e, "cartSlot");
 
-        // Place rail
-        switchSlotAndRightClick(rail);
-        sleep(d); if (!check()) return;
+        slotThenRightClick(rail);
+        sleep(stepGap); if (!check()) return;
 
-        // Draw and fire bow
-        switchSlot(bow); sleep(MIN_STEP_MS); if (!check()) return;
+        // Draw bow
+        switchSlot(bow);
+        sleep(SWITCH_GAP); if (!check()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
         mc.execute(() -> ((KeyBindingAccessor) mc.options.useKey).setPressed(true));
-        sleep(150); // bow draw time
+        sleep(150);
         mc.execute(() -> ((KeyBindingAccessor) mc.options.useKey).setPressed(false));
-        sleep(d); if (!check()) return;
+        sleep(stepGap); if (!check()) return;
 
-        // Place cart
-        switchSlotAndRightClick(cart);
+        slotThenRightClick(cart);
     }
 
-    // ── XB — Crossbow Cart ──────────────────────────────────────────────
+    // ── XB — Crossbow Cart ───────────────────────────────────────────────
     private static void runXB(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int rail = getSlot(e, "railSlot");
         int cart = getSlot(e, "cartSlot");
         int fns = getSlot(e, "fnsSlot");
         int crossbow = getSlot(e, "crossbowSlot");
 
-        switchSlotAndRightClick(rail);     sleep(d); if (!check()) return;
-        switchSlotAndRightClick(cart);     sleep(d); if (!check()) return;
-        switchSlotAndRightClick(fns);      sleep(d); if (!check()) return;
-        switchSlotAndRightClick(crossbow);
+        slotThenRightClick(rail);     sleep(stepGap); if (!check()) return;
+        slotThenRightClick(cart);     sleep(stepGap); if (!check()) return;
+        slotThenRightClick(fns);      sleep(stepGap); if (!check()) return;
+        slotThenRightClick(crossbow);
     }
 
-    // ── DR — Drain ──────────────────────────────────────────────────────
+    // ── DR — Drain ───────────────────────────────────────────────────────
     private static void runDR(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
-        int bucket = getSlot(e, "bucketSlot");
-
-        switchSlotAndRightClick(bucket);
+        slotThenRightClick(getSlot(e, "bucketSlot"));
     }
 
-    // ── LW — Lava Web ──────────────────────────────────────────────────
+    // ── LW — Lava Web ───────────────────────────────────────────────────
     private static void runLW(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
+        int stepGap = Math.max(STEP_GAP, e.delay);
         int lava = getSlot(e, "lavaSlot");
         int cobweb = getSlot(e, "cobwebSlot");
 
-        switchSlotAndRightClick(lava);  // place lava
-        sleep(d); if (!check()) return;
-        rightClick();                   // pick lava back up
-        sleep(d); if (!check()) return;
-        switchSlotAndRightClick(cobweb); // place cobweb
+        slotThenRightClick(lava);       // place lava
+        sleep(stepGap); if (!check()) return;
+        rightClick();                    // pick lava back up
+        sleep(stepGap); if (!check()) return;
+        slotThenRightClick(cobweb);      // place cobweb
     }
 
-    // ── LA — Lava ───────────────────────────────────────────────────────
+    // ── LA — Lava ────────────────────────────────────────────────────────
     private static void runLA(MacroConfig.MacroEntry e) throws InterruptedException {
-        int d = Math.max(MIN_STEP_MS, e.delay);
-        int lava = getSlot(e, "lavaSlot");
-
-        switchSlotAndRightClick(lava);
+        slotThenRightClick(getSlot(e, "lavaSlot"));
     }
 
-    // ── FXP — Fast XP (hold-to-run loop) ────────────────────────────────
+    // ── FXP — Fast XP (hold-to-run loop) ─────────────────────────────────
     public static void runFXPLoop(int delay, BooleanSupplier active) {
-        int d = Math.max(MIN_STEP_MS, delay);
+        int d = Math.max(STEP_GAP, delay);
         try {
             while (active.getAsBoolean() && check()) {
                 rightClick();
@@ -486,17 +450,17 @@ public class MacroRunner {
         } catch (InterruptedException ignored) {}
     }
 
-    // ── AC — Auto Crystal (hold-to-run loop) ────────────────────────────
+    // ── AC — Auto Crystal (hold-to-run loop) ─────────────────────────────
     public static void runACLoop(int crystalSlot, int delay, BooleanSupplier active) {
-        int d = Math.max(MIN_STEP_MS, delay);
+        int d = Math.max(STEP_GAP, delay);
         try {
             if (crystalSlot >= 0) switchSlot(crystalSlot);
-            sleep(5);
+            sleep(SWITCH_GAP);
 
             while (active.getAsBoolean() && check()) {
-                rightClick(); sleep(d); // place
+                rightClick(); sleep(d);
                 if (!active.getAsBoolean() || !check()) break;
-                leftClick();  sleep(d); // hit
+                leftClick();  sleep(d);
             }
         } catch (InterruptedException ignored) {}
     }
